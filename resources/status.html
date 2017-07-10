@@ -270,16 +270,25 @@
 
             document.getElementById("runStatusExperimentItems").innerHTML = "";
 
-
-            //<tr><td style="text-align:left;" width="30%" class="titleCell"> Experiment Name: </td>
-            //        <td id="runStatusExperimentName" style="text-align:left;"> unknown </td>
-            //      </tr>
-            document.getElementById("runStatusExperimentItems").innerHTML = "<tr><td style=\"text-align:left;\" width=\"30%\" class=\"titleCell\"> Experiment Name: </td>"+
-                                                                            "<td>"+
-                                                                            experimentItemsJson["experiment name"]
-                                                                            "</td>"+
-                                                                            "</tr>";
-
+            let experimentName = document.createElement("tr");
+            experimentName.innerHTML =
+              "<tr><td style=\"text-align:left;\" width=\"30%\" class=\"titleCell\"> Experiment Name: </td>" +
+              "<td style=\"text-align:left;\">" +
+              experimentItemsJson["experiment name"] +
+              "</td>" +
+              "</tr>";
+            document.getElementById("runStatusExperimentItems").appendChild(experimentName);
+            // check if lazy active is in the experiment items list
+            if (experimentItemsJson.hasOwnProperty("lazy active")) {
+              let experimentLazy = document.createElement("tr");
+              experimentLazy.innerHTML =
+                "<tr><td style=\"text-align:left;\" width=\"30%\" class=\"titleCell\"> Lazy Active: </td>" +
+                "<td style=\"text-align:left;\">" +
+                experimentItemsJson["lazy active"] +
+                "</td>" +
+                "</tr>";
+              document.getElementById("runStatusExperimentItems").appendChild(experimentLazy);
+            }
           }
 
         }
@@ -317,46 +326,48 @@
       function generateEquipmentTable() {
         document.getElementById("stripeList").innerHTML = equipmentTableHtml;
 
-        let equipKeys=Object.keys(equipmentJson);
-        for (i=0;i<equipKeys.length;i++) {
+        let equipKeys = Object.keys(equipmentJson);
+        for (i = 0; i < equipKeys.length; i++) {
           if (!equipmentJson[equipKeys[i]].common) {
 
-            let statusItem=document.createElement("td");
-            statusItem.align="center";
-            statusItem.innerHTML=equipmentJson[equipKeys[i+1]].common["status"];
-            if( equipmentJson[equipKeys[i+1]].common["status"].length<1){
-              statusItem.className="mgreencolour greenLight";
-            }else if(equipmentJson[equipKeys[i+1]].common["status color"].indexOf("Light")!=-1){
-              statusItem.className=equipmentJson[equipKeys[i+1]].common["status"];
-            }else{
-              statusItem.className="Light";
-              statusItem.style="background-color:"+equipmentJson[equipKeys[i+1]].common["status color"]+";";
+            let statusItem = document.createElement("td");
+            statusItem.align = "center";
+            statusItem.innerHTML = equipmentJson[equipKeys[i + 1]].common["status"];
+            if (equipmentJson[equipKeys[i + 1]].common["status"].length < 1) {
+              statusItem.className = "mgreencolour greenLight";
+            } else if (equipmentJson[equipKeys[i + 1]].common["status color"].indexOf("Light") != -1) {
+              statusItem.className = equipmentJson[equipKeys[i + 1]].common["status"];
+            } else {
+              statusItem.className = "Light";
+              statusItem.style = "background-color:" + equipmentJson[equipKeys[i + 1]].common["status color"] + ";";
             }
 
 
-            let eventsNum=equipmentJson[equipKeys[i+1]].statistics["events sent"];
-            if(equipmentJson[equipKeys[i+1]].statistics["events sent"]>1E9){
-              eventsNum=(equipmentJson[equipKeys[i+1]].statistics["events sent"]/1E9).toFixed(3)+"G";
-            }else if(equipmentJson[equipKeys[i+1]].statistics["events sent"]>1E6){
-              eventsNum=(equipmentJson[equipKeys[i+1]].statistics["events sent"]/1E6).toFixed(3)+"M";
+            let eventsNum = equipmentJson[equipKeys[i + 1]].statistics["events sent"];
+            if (equipmentJson[equipKeys[i + 1]].statistics["events sent"] > 1E9) {
+              eventsNum = (equipmentJson[equipKeys[i + 1]].statistics["events sent"] / 1E9).toFixed(3) + "G";
+            } else if (equipmentJson[equipKeys[i + 1]].statistics["events sent"] > 1E6) {
+              eventsNum = (equipmentJson[equipKeys[i + 1]].statistics["events sent"] / 1E6).toFixed(3) + "M";
             }
 
             //alert(statusItem.outerHTML)
-            document.getElementById("stripeList").innerHTML += "<tr><td><a href='/Equipment/" + equipmentJson[equipKeys[i]] +
-                                                              "/Variables'>" + 
-                                                              equipmentJson[equipKeys[i]] +
-                                                              "</a></td>"+
-                                                              statusItem.outerHTML+
-                                                              "<td>"+
-                                                              eventsNum+
-                                                              "</td>"+
-                                                              "<td>"+
-                                                              equipmentJson[equipKeys[i+1]].statistics["events per sec."].toFixed(1)+
-                                                              "</td>"+
-                                                              "<td>"+
-                                                              equipmentJson[equipKeys[i+1]].statistics["kbytes per sec."].toFixed(3)+
-                                                              "</td>"+
-                                                              "</tr>"
+            let equipmentRow = document.createElement("tr");
+            equipmentRow.innerHTML = "<td><a href='/Equipment/" +
+              equipmentJson[equipKeys[i]] +
+              "/Variables'>" +
+              equipmentJson[equipKeys[i]] +
+              "</a></td>" +
+              statusItem.outerHTML +
+              "<td>" +
+              eventsNum +
+              "</td>" +
+              "<td>" +
+              equipmentJson[equipKeys[i + 1]].statistics["events per sec."].toFixed(1) +
+              "</td>" +
+              "<td>" +
+              equipmentJson[equipKeys[i + 1]].statistics["kbytes per sec."].toFixed(3) +
+              "</td>";
+            document.getElementById("stripeList").appendChild(equipmentRow);
           }
         }
       }
@@ -412,10 +423,8 @@
             outerDiv.appendChild(innerDiv);
             diskLevelHtml.appendChild(outerDiv);
 
-
-            document.getElementById("logChannel").innerHTML += "<tr>" +
-              //Channel
-              "<td colspan=\"2\" class=\"mgreencolour greenLight\">" +
+            let logChannelRow = document.createElement("tr");
+            logChannelRow.innerHTML = "<td colspan=\"2\" class=\"mgreencolour greenLight\">" +
               "<a href=\"Logger/Channels/" + element + "/Settings\">" +
               "#" + element + ": " + "</a>" +
               currentChannel["settings"]["current filename"] +
@@ -437,11 +446,10 @@
               "</td>" +
 
               //Disk Level
+              diskLevelHtml.outerHTML;
 
-              diskLevelHtml.outerHTML +
 
-
-              "</tr>";
+            document.getElementById("logChannel").appendChild(logChannelRow);
 
           }
         }
@@ -452,8 +460,8 @@
           if (LazyJson[element].settings && LazyJson[element].statistics) {
             let currentLazy = LazyJson[element];
 
-            document.getElementById("logChannel").innerHTML += "<tr>" +
-              "<td colspan=\"2\" >" +
+            let logChannelLazy = document.createElement("tr");
+            logChannelLazy.innerHTML = "<td colspan=\"2\" >" +
               "<a href=\"Lazy/" + element + "/Settings\">" +
               element + "</a>" +
               "</td>" +
@@ -468,8 +476,9 @@
               "</td>" +
               "<td align=\"center\">" +
               currentLazy["statistics"]["backup status (%)"].toFixed(1) + "%" +
-              "</td>" +
-              "</tr>"
+              "</td>";
+
+            document.getElementById("logChannel").appendChild(logChannelLazy);
           }
         }
 
@@ -496,20 +505,19 @@
 
 
         for (i = 0; i < numOfClientRows; i++) {
-          let oneRow = "<tr>"
+          let oneClientRow = document.createElement("tr");
           //loop j for number of columns
           for (j = 0; j < 3; j++) {
             if (currentClient < clientNames.length) {
-              oneRow += "<td colspan=\"2\" align=\"center\">" +
+              oneClientRow.innerHTML += "<td colspan=\"2\" align=\"center\">" +
                 clientNames[currentClient]["name"] +
                 " [" + clientNames[currentClient]["host"] + "]" +
                 "</td>";
             }
             currentClient++;
           }
-          oneRow += "</tr>";
 
-          document.getElementById("clientsTable").innerHTML += oneRow;
+          document.getElementById("clientsTable").appendChild(oneClientRow);
           //TODO
         }
         //document.getElementById("clientsTest").innerHTML =clientNames;
