@@ -1,0 +1,30 @@
+/*! @page Performance SECTION 8: Performance
+
+<!-- Navigation -->
+<br>
+\htmlonly
+<script type="text/javascript">
+pages("DataAnalyzer","Performance",  "SpecialConfig","Performance","end" ); // back index next {top bottom}
+sections("DataAnalyzer","Performance","SpecialConfig"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+<br>
+<!-- End of Navigation -->
+
+\todo May be changed to current use of the Midas package elsewhere
+
+
+<!-- Navigation -->
+<br>
+\htmlonly
+<script type="text/javascript">
+pages("DataAnalyzer","Performance",  "SpecialConfig","Performance","" ); // back index next {top bottom}
+sections("DataAnalyzer","Performance","SpecialConfig"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+<br>
+<!-- End of Navigation -->
+\anchor end
+*/

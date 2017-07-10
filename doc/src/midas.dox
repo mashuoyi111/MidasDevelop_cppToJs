@@ -1,0 +1,158 @@
+/*! \mainpage Midas Documentation
+
+\anchor Top 
+
+
+
+
+
+
+<table style=" text-align: left; width: 100%;" border="0" cellpadding="2" cellspacing="2">
+<tr>
+<td style="vertical-align: top;">
+ *  \image html logo.png
+</td>
+<td style="vertical-align: top;">
+
+
+<center>
+<span class="lcmidas">
+<span class="ucmidas">M</span>aximum <span class="ucmidas">I</span>ntegrated <span class="ucmidas">D</span>ata
+<span class="ucmidas">A</span>cquisition <span class="ucmidas">S</span>ystem</span><br>
+<br>
+<span style=" font-size: 150%; font-weight: bold; ">  Welcome to the world of <br> <span  style="color: green; font-size: 125%;">MIDAS</span>. </span>
+<br>
+</center>
+</td>
+<td style="vertical-align: top;">
+ *  \image html logo.png
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top;">
+<!-- Navigation (page) -->
+\htmlonly
+<script type="text/javascript">
+//pages("","", "Intro","","" ); // back index next {top bottom}
+top_mainpage("Intro","end")
+</script>
+\endhtmlonly
+</td>
+<td style="vertical-align: top; text-align: center;">
+<span  style="color: green; font-size: 125%;">
+ \b MIDAS is a versatile Data Acquisition System (DAQ) for medium scale physics experiments.
+   </span>
+   </td>
+<td style="vertical-align: top;">
+<!-- Navigation (section) -->
+\htmlonly
+<script type="text/javascript">
+sections("","","Intro"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+</td></tr>
+</table>
+
+
+
+<br>
+   If you want a <b>flexible and simple DAQ </b>, @ref I_Midas_system_picture "MIDAS and its applications" may be what you are looking for. This document will try to answer most of your questions regarding
+   installation, setup, running, and development.
+
+
+ 
+
+   - <b>MIDAS</b> is a result of a development effort made by
+      - <b>Stefan Ritt</b> at  <a href="http://www.psi.ch">PSI</a> in Switzerland
+     (<a href="http://midas.psi.ch">Midas\@PSI</a>) in collaboration with
+      - <b>Pierre Amaudruz</b> and <b>Konstantin Olchanski</b>
+     at <a href="http://www.triumf.info">TRIUMF</a> in Canada.
+
+   - <b>MIDAS</b> has a <span class="emphasis">dedicated discussion forum</span> (Electronic logbook) which provides a common place for MIDAS
+   users to report problems, share experience, post requests for new features or suggestions for improvement. 
+   You can browse this <b><a href="https://ladd00.triumf.ca/elog/Midas">Elog</a></b>
+   or register for Email notifications.
+
+   - The \b MIDAS  <span class="emphasis">source code</span> is subject to the <a href="http://www.gnu.org/copyleft/gpl.html">GPL</a> and can be
+   accessed from the <b><a href="https://savannah.psi.ch/viewvc/meg_midas/trunk/">SVN</a></b>   
+   repository site in Switzerland either for inspection or download (see  @ref Quickstart "Quickstart").  A 
+<b> tarball </b> is available either from the <a href="http://midas.psi.ch/download/">Swiss</a>
+     or <a href="http://ladd00.triumf.ca/~daqweb/ftp/"> Canadian</a> sites.
+   
+   - <b>MIDAS</b> can be run on <span class="emphasis">multiple platforms</span> (e.g. Linux, Windows, Mac)
+
+
+ <div style="color: green; font-size: 100%;">
+The MIDAS DAQ provides:
+</div>
+     - <span class="emphasis">Data collection</span> from local and/or remote hardware sources.
+     -  <span class="emphasis">Data recording</span> to common storage media.
+     -  <span class="emphasis">Full data flow control</span>.
+     -  <span class="emphasis">Hardware drivers</span>: see  @ref FE_Hardware "MIDAS driver library"
+     -  <span class="emphasis">Event-by-event analysis</span> through PAW or Root based application. Please refer to: 
+<ul>
+      <li> <b><a href="http://midas.psi.ch/rome">ROME</a></b> analyzer framework.
+      <li> <b><a href="https://www.triumf.info/wiki/DAQwiki/index.php/ROOTANA">Rootana</a></b> Root analyser
+      <li><b><a href="https://www.triumf.info/wiki/DAQwiki/index.php/ROODY">Roody</a></b> GUI histogram visualizer
+   application. 
+</ul>
+
+Other related MIDAS links can be found <a href="http://daq-plone.triumf.ca/SR/MIDAS/">here</a>.
+ <a name="online midas doc">
+ <div style="font-size: 225%; text-align: center">
+  @ref Organization "Online MIDAS Documentation"
+</div>
+
+
+<table
+style="text-align: left; width: 50%; margin-left: auto; margin-right: auto;"
+border="0" cellpadding="2" cellspacing="2">
+<tr>
+<td style="vertical-align: top;">
+<ul>
+
+        <li>    @ref Top "SECTION 1: Main Page" 
+        <li>     \subpage Intro
+        <li>      \subpage Quickstart
+        <li>      \subpage Features
+        <li>     \subpage RunControl
+        <li>    \subpage FrontendOperation
+        <li>    \subpage DataAnalysis
+        <li>     \subpage Performance
+        <li>     \subpage SpecialConfig
+        <li>    \subpage BuildingOptions
+        <li>    \subpage NDF
+        <li>    \subpage FAQ
+        <li>    \subpage Convention
+	<li>    \subpage DocIndex
+        <li>    \subpage Organization
+</ul>
+</td>
+</tr>
+</table>
+
+
+\anchor end
+<!-- Navigation -->
+<br>
+\htmlonly
+<script type="text/javascript">
+pages("","", "Intro","index","" ); // back index next {top bottom}
+sections("","index","Intro"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+
+<br>
+<!-- End of Navigation -->
+
+  \htmlonly <center><small> <em>
+  Powered by<br><a href=http://www.stack.nl/~dimitri/doxygen/features.html>
+  <img src="doxygen.png" alt="doxygen" style="border: 0px solid;"></a>
+  </em> </small> </center> \endhtmlonly 
+
+
+<!-- End of midas.dox (main page)
+     Next to section : Intro -->
+*/
+

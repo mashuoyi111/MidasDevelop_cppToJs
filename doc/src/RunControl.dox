@@ -1,0 +1,3443 @@
+/*! @page RunControl SECTION 5: Run Control
+<!-- Section:      RUN CONTROL   -->
+<br>
+\htmlonly
+<script type="text/javascript">
+//
+// pages params : back index next {top bottom}
+pages( "F_Elog",  "RunControl", "RC_Run_States_and_Transitions","RunControl","end" );
+//
+// sections params:   last section; top of this section; next section
+sections("Features", "RunControl","FrontendOperation");
+</script>
+\endhtmlonly
+<br>
+
+
+@section RC_Intro  Introduction
+This section describes \b Run \b Control and \b Monitoring of the experiment.  
+
+A  \b "run" starts when the MIDAS system receivs a <b> Start Transition </b>, and continues 
+until it receives a <b> Stop transition </b>. In the simplest case, this is when the 
+commands \b "Start" and \b "Stop" are issued. 
+
+<b> "Run Control" </b> describes how that run may be controlled, including
+ - where the data is to be stored (e.g. tape), 
+ - on what conditions the run should be allowed to start (e.g. hardware is ready, beam is on) 
+ - when it should stop (e.g. beam goes off, hardware failure). 
+
+<b> "Monitoring" </b> involves
+ - informing the user on the progress of the run,
+ - displaying statistics or history plots,
+ - sending information or alarm messages to warn the user of any problems.
+
+<br>
+Fundamental to 
+Run Control and Monitoring is the @ref F_Online_Database_overview which contains all of the 
+information for an experiment. Therefore a run control program requires access only to information in the ODB.
+
+<br>
+Programming exactly what data is read during the run falls under the category  @ref FrontendOperation ,
+and analyzing the data during or after the run is described under  @ref DataAnalysis .   
+<br>
+
+<!-- declare the sub-pages for this section -->
+
+ - \subpage RC_Run_States_and_Transitions
+ - \subpage RC_run_control
+    - @ref RC_odbedit_utility "odbedit"
+    - @ref RC_mhttpd "mhttpd"
+ - \subpage RC_Sequencer
+ - \subpage RC_Monitor
+ - \subpage RC_customize_ODB
+ - \subpage RC_Hot_Link
+
+<br><br>
+
+
+\anchor end
+\htmlonly
+<script type="text/javascript">
+pages( "F_Elog",  "RunControl", "RC_Run_States_and_Transitions","RunControl","" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+<!-- End of page RunControl Run Control -->
+*/
+
+<!-- ========= R U N  S T A T E S & T R A N S I T I O N S ==================== -->
+
+/*!  @page RC_Run_States_and_Transitions Run States and Transitions
+<br>
+\htmlonly
+<script type="text/javascript">
+pages( "RunControl",  "RunControl", "RC_run_control","RC_Run_States_and_Transitions","end" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+<br>
+\anchor idx_run_states
+\anchor idx_transition
+Three <b>Run States</b> define the states of the MIDAS DAQ system:
+<br>
+<br><center> <b>\em Stopped, \em Paused, and \em Running.</b> </center>
+<br>
+In order to change from one state to another, MIDAS provides four basic
+\b transition \b functions : <br>
+<br><center><b>\em TR_START,  \em TR_PAUSE, \em TR_RESUME, \em TR_STOP </b></center>
+
+
+ * <center> Transitions
+ *  \image html transition.gif
+ * </center> 
+
+\anchor idx_run_state_codes
+\anchor idx_run_transition_codes
+\anchor state_transition <!-- needed by C code -->
+@section RC_state_transition MIDAS State and Transition Codes
+
+MIDAS provides three <b> State Codes </b> (defined in midas.h)  for the three run states (Stopped, Paused and Running).
+The current State of an experiment is available under the @ref RC_ODB_RunInfo_Tree.
+
+<table style="text-align: left; width: 25%;" border="0" cellpadding="2"
+cellspacing="2">
+<tr>
+<td colspan="1" rowspan="1" style=" text-align: left;" > <b>Transition</b> <br>
+</td>
+<td colspan="1" rowspan="1" style=" text-align: left;">
+<b>Value</b><br>
+</td>
+</tr>
+<tr><td>STATE_STOPPED</td><td>1</td></tr>  
+<tr><td>STATE_PAUSED</td><td>2</td></tr>   
+<tr><td>STATE_RUNNING</td><td>3</td></tr>
+</table>
+
+and four <b> Transition Codes </b> for the four Transitions: 
+
+  - TR_START 
+  - TR_STOP  
+  - TR_PAUSE 
+  - TR_RESUME
+
+While a transition is in progress, these Transition Codes will be found under 
+the @ref RC_ODB_RunInfo_Tree for an experiment.
+
+<hr> 
+\anchor idx_run_transition_priority
+@section RC_Transition_priority Run Transition Priority
+
+During these transition periods, any MIDAS client registered to
+receive notification of such a transition will be able to perform dedicated tasks in either
+synchronized or asynchronized mode, within the overall run control of the experiment. 
+
+In order to provide more flexibility to the transition sequence of all the 
+MIDAS clients connected to a given experiment, each transition function has 
+a <b> transition  sequence  number </b> attached to it. This transition sequence is 
+used to establish within a given transition the  order of the invocation of the 
+MIDAS clients  (from the lowest sequence number to the highest).  By this means, 
+<b> MIDAS provides the user with full control of the sequencing of any MIDAS client. </b>
+
+Click on the links to see an example of how the transition priority operates 
+at @ref RC_transition_start "start of run" and 
+at @ref RC_transition_stop  "end of run". 
+
+<br><hr><br>
+\anchor idx_transition_register
+@subsection RC_Register_for_run_transition Registering for a run transition
+
+Any MIDAS client can  register to receive notification  for a run transition. 
+This notification is done by registering to the system for a given transition
+( cm_register_transition() ) by specifying the transition type and the
+sequencing number (1 to 1000). 
+<br>
+The following example show registering to the TR_START transition with a sequencing 
+number of 450 and to a TR_STOP  transition with a sequencing number of
+650.
+
+\code
+  INT main()
+  {
+    ...
+  cm_register_transition(TR_START, tr_prestart,450);
+  cm_register_transition(TR_STOP, tr_poststop,650);
+    ...
+  }
+
+  // callback
+  INT tr_prestart(INT run_number, char *error)
+  {
+	// code to perform actions prior to frontend starting 
+
+	return (status);
+  }
+
+  // callback
+  INT tr_poststop(INT run_number, char *error)
+  {
+	// code to perform actions after frontend has stopped 
+
+	return (status);
+  }
+@endcode
+
+<ul>
+<li> On a TR_START transition, tr_prestart will run \b after the logger and event builder, 
+but \b before the Frontend (see \ref RC_Default_Seq_Numbers).    
+<li> On a TR_STOP transition, tr_poststop will run \b after the frontend, but \b before the logger and event builder.
+</ul>
+
+<br><hr><br>
+@subsubsection RC_Multiple_Registration Multiple Registration to a Transition
+Multiple registration to a given transition
+can be requested. This last option allows (for example) <b> two callback functions to be invoked  before and after a given transition </b>, such as the start of the logger.
+
+
+\code
+my_application.c
+  // Callback 
+  INT before_logger(INT run_number, char *error)
+  {
+    printf("Initialize ... before the logger gets the Start Transition");
+    ...
+    return CM_SUCCESS;
+  }
+
+  // Callback 
+  INT after_logger(INT run_number, char *error)
+
+
+
+  {
+    printf("Log initial info to file... after logger gets the Start Transition");
+    ...
+    return CM_SUCCESS;
+  }
+
+  INT main()
+  {
+    ...
+    cm_register_transition(TR_START, before_logger, 100);
+    cm_register_transition(TR_START, after_logger, 300);
+    ...
+  }
+@endcode
+
+
+
+<br><hr><br>
+\anchor idx_run_transition_sequence
+@subsection RC_Default_Seq_Numbers Default Transition Sequence Numbers
+
+By default the following sequence numbers are used:
+
+<br>
+<table style="text-align: left; width: 50%;" border="1" cellpadding="2"
+cellspacing="2">
+
+<tr>
+<td colspan="1" rowspan="2"> <b>Client</b> <br>
+</td>
+<td colspan="4" rowspan="1" style=" text-align: center;">
+<b>Default Transition Sequence Number</b><br>
+</td>
+</tr>
+<tr>
+<td>TR_START<br>
+</td>
+<td>TR_PAUSE<br>
+</td>
+<td>TR_RESUME<br>
+</td>
+<td>TR_STOP<br>
+</td>
+</tr>
+<tr>
+<td>Frontend<br>
+</td>
+<td>500<br>
+</td>
+<td>500<br>
+</td>
+<td>500<br>
+</td>
+<td>500<br>
+</td>
+</tr>
+<tr>
+<td>Analyzer<br>
+</td>
+<td>500</td>
+<td>500</td>
+<td>500</td>
+<td>500</td>
+</tr>
+<tr>
+<td>Logger<br>
+</td>
+<td>200<br>
+</td>
+<td>500</td>
+<td>500</td>
+<td>800<br>
+</td>
+</tr>
+<tr>
+<td>EventBuilder <br>
+</td>
+<td>300<br>
+</td>
+<td>500</td>
+<td>500</td>
+<td>700<br>
+</td>
+</tr>
+</table>
+<br>
+<br><hr><br>
+@subsection RC_Review_Seq_Num Review the Client Transition Sequence Numbers in the ODB
+\anchor RC_odb_system_tree
+\anchor idx_ODB_tree_System
+The <b> ODB /System tree </b> contains information specific to each "MIDAS client" currently
+connected to the experiment. The sequence number appears in the ODB under /System/Clients/
+\code
+[local:midas:S]Clients>ls -lr
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Clients                         DIR
+    1832                        DIR     <------------ Frontend 1
+        Name                    STRING  1     32    21h  0   R    ebfe01
+        Host                    STRING  1     256   21h  0   R    pierre2
+        Hardware type           INT     1     4     21h  0   R    42
+        Server Port             INT     1     4     21h  0   R    2582
+        Transition START        INT     1     4     21h  0   R    500
+        Transition STOP         INT     1     4     21h  0   R    500
+        Transition PAUSE        INT     1     4     21h  0   R    500
+        Transition RESUME       INT     1     4     21h  0   R    500
+        RPC                     DIR
+            17000               BOOL    1     4     21h  0   R    y
+    3872                        DIR     <------------ Frontend 2 
+        Name                    STRING  1     32    21h  0   R    ebfe02
+        Host                    STRING  1     256   21h  0   R    pierre2
+        Hardware type           INT     1     4     21h  0   R    42
+        Server Port             INT     1     4     21h  0   R    2585
+        Transition START        INT     1     4     21h  0   R    500
+        Transition STOP         INT     1     4     21h  0   R    500
+        Transition PAUSE        INT     1     4     21h  0   R    500
+        Transition RESUME       INT     1     4     21h  0   R    500
+        RPC                     DIR
+            17000               BOOL    1     4     21h  0   R    y
+    2220                        DIR     <------------ ODBedit doesn't need transition
+        Name                    STRING  1     32    42s  0   R    ODBEdit
+        Host                    STRING  1     256   42s  0   R    pierre2
+        Hardware type           INT     1     4     42s  0   R    42
+        Server Port             INT     1     4     42s  0   R    3429
+    568                         DIR     <------------ Event Builder
+        Name                    STRING  1     32    26s  0   R    Ebuilder
+        Host                    STRING  1     256   26s  0   R    pierre2
+        Hardware type           INT     1     4     26s  0   R    42
+        Server Port             INT     1     4     26s  0   R    3432
+        Transition START        INT     1     4     26s  0   R    300
+        Transition STOP         INT     1     4     26s  0   R    700
+    2848                        DIR     <------------ Logger 
+        Name                    STRING  1     32    5s   0   R    Logger
+        Host                    STRING  1     256   5s   0   R    pierre2
+        Hardware type           INT     1     4     5s   0   R    42
+        Server Port             INT     1     4     5s   0   R    3436
+        Transition START        INT     1     4     5s   0   R    200
+        Transition STOP         INT     1     4     5s   0   R    800
+        Transition PAUSE        INT     1     4     5s   0   R    500
+        Transition RESUME       INT     1     4     5s   0   R    500
+        RPC                     DIR
+            14000               BOOL    1     4     5s   0   R    y
+@endcode
+
+
+<br><hr><br>
+@subsection RC_Change_Seq_Num Change the Client Sequence Number
+
+The \em /System/Clients/... tree reflects the system at a given time. If a permanent
+change of a client sequence number is required, the MIDAS system call cm_set_transition_sequence()
+can be used. 
+
+
+<br><hr><br>
+@section RC_Deferred_Transition Deferred Transitions
+Any transition may be deferred until some condition is satisfied. This is usually set up
+in a frontend (see @ref FE_Deferred_Transition "setup Deferred Transition" for further information).
+
+<br>
+<hr>
+<br>
+\anchor idx_ODB_tree_RunInfo
+@section RC_ODB_RunInfo Run Information
+Basic information about the state of the current run is available in the 
+@ref RC_ODB_RunInfo_Tree . This information is displayed on the 
+@ref  RC_mhttpd_minimal_status_page  "Main Status page of mhttpd" or can viewed with 
+@ref RC_odbedit_utility "odbedit" as shown @ref RC_ODB_RunInfo_Tree "below" .
+
+
+@subsection RC_ODB_RunInfo_Tree ODB /RunInfo Tree
+This branch of the ODB contains system information related to the run information.
+Several time fields are available for run time statistics.
+\code
+odb -e expt -h host
+[host:expt:Running]/>ls -r -l /runinfo
+Key name                      Type    #Val  Size  Last Opn Mode Value
+------------------------------------------------------------------------
+Runinfo                        DIR
+    State                      INT     1     4     2h   0   RWD  3
+    Online Mode                INT     1     4     2h   0   RWD  1
+    Run number                 INT     1     4     2h   0   RWD  8521
+    Transition in progress     INT     1     4     2h   0   RWD  0
+    Requested transition       INT     1     4     2h   0   RWD  0
+    Start time                 STRING  1     32    2h   0   RWD  Thu Mar 23 10:03:44 2000
+    Start time binary          DWORD   1     4     2h   0   RWD  953834624
+    Stop time                  STRING  1     32    2h   0   RWD  Thu Mar 23 10:03:33 2000
+    Stop time binary           DWORD   1     4     2h   0   RWD  0
+@endcode 
+
+
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="2">
+<caption>Above: meaning of keys in the /RunInfo ODB tree
+</caption>
+<tr>
+<td colspan="2" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Keys in the ODB tree /RunInfo
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+ODB Key 
+</td>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;"> 
+Explanation
+</td></tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+ State 
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"> 
+Specifies the state of the current run (see @ref RC_state_transition) .
+    The possible states are 
+         - 1: STOPPED  ( STATE_STOPPED )
+         - 2: PAUSED   ( STATE_PAUSED )
+         - 3: RUNNING  ( STATE_RUNNING )
+
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Online Mode
+</td>
+<td style="vertical-align: top;  font-weight: normal; text-align: left;"> 
+Specifies the expected acquisition mode.
+    This parameter allows the user to detect if the data are coming from a "real-time"
+    hardware source or from a data save-set. Note that for analysis replay using
+    "analyzer" this flag will be switched off.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Run number
+</td>
+<td style="vertical-align: top;  font-weight: normal; text-align: left;"> 
+ Specifies the current run number. This number is automatically
+    incremented by a successful run start procedure.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Transition in progress
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"> 
+ Specifies the current internal state of the system.
+    This parameter is used for multiple source of "run start" synchronization.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Requested transition
+</td>
+<td style="vertical-align: top;  font-weight: normal; text-align: left;"> 
+ Specifies the current internal state of the @ref RC_Deferred_Transition state of the system.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Start Time
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"> 
+ Specifies in an ASCII format the time at which the last run has been started.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;"> 
+Start Time binary
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"> 
+Specifies in a binary format at the time at which the
+    last run has been started This field is useful for time interval computation.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;"> 
+Stop Time
+</td>
+<td style="vertical-align: top;  font-weight: normal; text-align: left;"> 
+Specifies in an ASCII format the time at which the last run has
+    been stopped.
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;"> 
+Stop Time binary
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"> 
+ Specifies in a binary format the time at which the last
+    run has been stopped. This field is useful for time interval computation.
+</td>
+</tr>
+</table>
+
+
+
+
+
+\anchor end
+\htmlonly
+<script type="text/javascript">
+pages( "RunControl",  "RunControl","RC_run_control", "RC_Run_States_and_Transitions","" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+<!-- End of page RC_Run_States_and_Transitions Run States and Transitions  -->
+
+*/
+<!-- ============================  R U N  C O N T R O L   ==================== -->
+
+/*! @page  RC_run_control Run Control Programs
+
+<br>
+\htmlonly
+<script type="text/javascript">
+pages( "RC_Run_States_and_Transitions",  "RunControl","RC_odbedit", "RC_run_control","end" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+Users must have some way of controlling the experiment (i.e. starting and stopping a run, changing the 
+run parameters etc.) and of determining the progress of the run (e.g. whether the run started 
+successfully, whether data is being taken and saved, and whether any error conditions have occurred).
+<br>
+Two options for <b> Run Control </b> are provided in the MIDAS package. They are @ref RC_odbedit_utility "odbedit",
+a program with a simple command line interface, and @ref RC_mhttpd_utility "mhttpd", the web-based 
+run control program. 
+<br>
+ <span class="utility">mhttpd</span> is the usual choice for experimenters, since it provides a graphical
+interface, and is used both for run control and monitoring. It has many features not available in odbedit, such as history display, 
+electronic logbook, custom pages and alias-links.  However, it has limited functionality as an ODB editor. 
+<br>
+ <span class="utility">odbedit</span> is very useful for debugging, is often quicker 
+and simpler to use, and is a fully functional odb editor (hence its name). It has limited monitoring
+capability. 
+<br>
+Other utilities for monitoring are also provided, such as @ref RC_mstat_utility "mstat", a simple monitoring task, and 
+@ref RC_mdump_utility "mdump" which can dump the raw data. 
+<br>
+
+Various keys in the ODB can be customized for Run Control. This involves creating and/or editing keys using odbedit or
+mhttpd. Where the customization is only relevent to mhttpd, it will be described in the appropriate mhttpd section. 
+
+The odbedit and mhttpd utilities will be described next.
+
+ - \subpage RC_odbedit 
+ - \subpage RC_mhttpd
+<br>
+<br>
+
+<br>
+\htmlonly
+<script type="text/javascript">
+pages( "RC_Run_States_and_Transitions",  "RunControl","RC_odbedit", "RC_run_control","" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+\anchor end
+<!-- End of page RC_run_control Run Control Programs -->
+*/
+
+
+<!--
+
+
+
+CONTROLLING ...   odbedit, mhttpd pages go in here  
+
+      
+-->
+
+
+
+
+/*! @page RC_Monitor Monitoring the Experiment
+<br>
+\htmlonly
+<script type="text/javascript">
+pages( "RC_Sequencer" ,"RunControl", "RC_customize_ODB","RC_Monitor","end" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+The most powerful tool for \b monitoring a MIDAS experiment is of course @ref RC_mhttpd "mhttpd", used for
+both Run Control and Monitoring. However, it does not (yet) cover every feature needed, and the MIDAS system also
+provides several other utilities for monitoring aspects of the data acquistion system. These
+include  @ref RC_mstat_utility "mstat"  to display the run statistics, and @ref RC_mdump_utility "mdump", to dump the raw data, which is particularly
+useful for debugging. These utilities do provide information without having to use a browser.
+
+ - @ref RC_mhttpd "Monitoring and Run Control using the MIDAS Web Server" 
+ - @ref RC_mstat_utility 
+ - @ref RC_mdump_utility 
+ - @ref RC_rmidas_utility
+ - @ref RC_hvedit_utility
+<br>
+
+<br><hr><br>
+\anchor idx_mstat-utility
+@section  RC_mstat_utility  mstat - monitor application display
+
+\b mstat is a simple ASCII status display. It presents in a compact form the most valuable
+information of the current condition of the MIDAS Acquisition system.
+The display is composed at the most of 5 sections depending on the current status
+of the experiment. The section displayed in order from top to bottom refer to:
+- Run information.
+- Equipment listing and statistics if any @ref FE_frontend_utility "frontend" is active.
+- Logger information and statistics if  @ref F_mlogger_utility "mlogger" is active.
+- Lazylogger status if  @ref F_lazylogger_utility "lazylogger" is active.
+- Client listing.
+lock
+- <b> Arguments </b>
+  - [-h ] : help
+  - [-h hostname ] : host name (see @ref RC_odbedit_utility)
+  - [-e exptname ] : experiment name (see @ref RC_odbedit_utility)
+  - [-l ] : loop.
+  Forces mstat to remain in a display loop. Enter "!" to terminate the command.
+  - [-w time ] : refresh rate in second.
+  Specifies the delay in second before refreshing the screen with up to date information.
+  Default: 5 seconds. Has to be used in conjunction with -l switch. Enter "R" to refresh
+  screen on next update.
+ 
+- <b> Usage </b>
+ \code
+ >mstat -l
+*-v1.8.0- MIDAS status page -------------------------Mon Apr  3 11:52:52 2000-* 
+Experiment:chaos       Run#:8699    State:Running          Run time :00:11:34   
+Start time:Mon Apr  3 11:41:18 2000                                             
+                                                                                
+FE Equip.   Node              Event Taken    Event Rate[/s] Data Rate[Kb/s]     
+B12Y        pcch02            67             0.0            0.0                 
+CUM_Scaler  vwchaos           23             0.2            0.2                 
+CHV         pcch02            68             0.0            0.0                 
+KOS_Scalers vwchaos           330            0.4            0.6                 
+KOS_Trigger vwchaos           434226         652.4          408.3               
+KOS_File    vwchaos           0              0.0            0.0                 
+Target      pcch02            66             0.0            0.0 
+                                                                                
+Logger Data dir: /scr0/spring2000            Message File: midas.log            
+Chan.   Active Type      Filename            Events Taken   KBytes Taken        
+  0     Yes    Disk      run08699.ybs        434206          4.24e+06           
+                                                                                
+Lazy Label     Progress  File name           #files         Total               
+cni-53         100[%]    run08696.ybs        15             44.3[%]             
+                                                                                
+Clients:  MStatus/koslx0         Logger/koslx0          Lazy_Tape/koslx0        
+          CHV/pcch02             MChart1/umelba         ODBEdit/koslx0          
+          CHAOS/vwchaos          ecl/koslx0             Speaker/koslx0          
+          MChart/umelba          targetFE/pcch02        HV_MONITOR/umelba       
+          SUSI/koslx0            History/kosal2         MStatus1/dasdevpc  
+     
+*------------------------------------------------------------------------------*
+@endcode
+
+
+<hr> 
+
+\anchor idx_mdump-utility
+@section RC_mdump_utility mdump       - displays event bank contents (online or offline)
+
+This application allows the experimenter to "peep" into the data flow in order to display a
+snap-shot of the event. Its use is particularly powerful during experimental setup.
+<br>In addition <span class="utility">mdump</span> has
+the capability to operate on data save-set files stored on disk or tape.
+The main \b mdump restriction is the fact that it works only for events formatted
+in @ref FE_bank_construction "banks" (i.e. MIDAS banks).
+
+<span class="utility">mdump</span> can be built with  \b zlib.a
+in order to gain direct access to the data within a file with extension
+\b mid.gz or \b ybs.gz. See @ref BO_NEED_ZLIB Building Option.
+
+
+- <b> Arguments </b> for Online use
+  - [-h ] : help for online use.
+  - [-h hostname ] : Host name.
+  - [-e exptname ] : Experiment name.
+  - [-b bank name] : Display event containg only specified bank name.
+  - [-c compose] : Retrieve and compose file with either Add run\# or Not (def:N).
+  - [-f format] : Data representation (x/d/ascii) def:hex.
+  - [-g type ] : Sampling mode either Some or All (def:S).
+     >>> in case of -c it is recommented to used -g all.
+  - [-i id ] : Event Id.
+  - [-j ] : Display bank header only.
+  - [-k id ] : Event mask.
+  - [-l number ] : Number of consecutive event to display (def:1).
+  - [-m mode] : Display mode either Bank or Raw (def:B)
+
+  - [-s ] : Data transfer rate diagnositic.
+  - [-w time] : Insert wait in [sec] between each display.
+  - [-x filename ] : Input channel. data file name of data device. (def:online)
+  - [-y ] : Display consistency check only.
+  - [-z buffer name] : Midas buffer name to attach to (def:SYSTEM)
+
+
+- Additional <b> Arguments </b> for Offline
+  - [-x -h ] : help for offline use.
+  - [-t type ] : Bank format (MIDAS).
+  - [-w what] :  Header, Record, Length, Event, Jbank_list (def:E)
+ 
+- <b> Usage </b>
+mdump can operate on either data stream (online) or on save-set data files.
+Specific help is available for each mode.
+\code
+ > mdump -h
+ > mdump -x -h
+@endcode
+
+
+<br><hr><br>
+@subsection RC_mdump_ex1 Example 1 mdump in offline mode
+
+The example below shows mdump operating on a file of saved data in  @ref FE_Midas_format "MIDAS format" : 
+\code
+Tue> mdump -x run37496.mid | more
+------------------------ Event# 0 --------------------------------
+------------------------ Event# 1 --------------------------------
+Evid:0001- Mask:0100- Serial:1- Time:0x393c299a- Dsize:72/0x48
+
+#banks:2 - Bank list:-SCLRRATE-
+
+Bank:SCLR Length: 24(I*1)/6(I*4)/6(Type) Type:Integer*4
+   1-> 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 
+
+Bank:RATE Length: 24(I*1)/6(I*4)/6(Type) Type:Real*4 (FMT machine dependent)
+   1-> 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 
+------------------------ Event# 2 --------------------------------
+Evid:0001- Mask:0004- Serial:1- Time:0x393c299a- Dsize:56/0x38
+#banks:2 - Bank list:-MMESMMOD-
+
+Bank:MMES Length: 24(I*1)/6(I*4)/6(Type) Type:Real*4 (FMT machine dependent)
+   1-> 0x3de35788 0x3d0b0e29 0x00000000 0x00000000 0x3f800000 0x00000000 
+
+Bank:MMOD Length: 4(I*1)/1(I*4)/1(Type) Type:Integer*4
+
+
+   1-> 0x00000001 
+------------------------ Event# 3 --------------------------------
+Evid:0001- Mask:0008- Serial:1- Time:0x393c299a- Dsize:48/0x30
+#banks:1 - Bank list:-BMES-
+
+Bank:BMES Length: 28(I*1)/7(I*4)/7(Type) Type:Real*4 (FMT machine dependent)
+   1-> 0x443d7333 0x444cf333 0x44454000 0x4448e000 0x43bca667 0x43ce0000 0x43f98000 
+------------------------ Event# 4 --------------------------------
+Evid:0001- Mask:0010- Serial:1- Time:0x393c299a- Dsize:168/0xa8
+#banks:1 - Bank list:-CMES-
+
+Bank:CMES Length: 148(I*1)/37(I*4)/37(Type) Type:Real*4 (FMT machine dependent)
+   1-> 0x3f2f9fe2 0x3ff77fd6 0x3f173fe6 0x3daeffe2 0x410f83e8 0x40ac07e3 0x3f6ebfd8 0x3c47ffde 
+   9-> 0x3e60ffda 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x3f800000 
+  17-> 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 0x00000000 
+
+  25-> 0x3f800000 0x3f800000 0x3f800000 0x00000000 0x3f800000 0x00000000 0x3f800000 0x3f800000 
+  33-> 0x3f800000 0x3f800000 0x3f800000 0x3f800000 0x00000000 
+------------------------ Event# 5 --------------------------------
+Evid:0001- Mask:0020- Serial:1- Time:0x393c299a- Dsize:32/0x20
+#banks:1 - Bank list:-METR-
+
+Bank:METR Length: 12(I*1)/3(I*4)/3(Type) Type:Real*4 (FMT machine dependent)
+   1-> 0x00000000 0x39005d87 0x00000000 
+...
+@endcode
+
+
+<br><hr><br>
+@subsection RC_mdump_ex2 Example 2 : mdump in online mode
+
+
+The examples below shows mdump operating in online mode (data is in  @ref FE_Midas_format "MIDAS format").
+  - <b> Example 1 : dump the bankheaders</b>
+\code
+> mdump -j
+[pol@isdaq01 pol]$ mdump -j
+-4506 -- Enter <!> to Exit ------- Midas Dump ---
+------------------------ Event# 1 ------------------------
+Evid:0002- Mask:0001- Serial:2- Time:0x4c9a4c2b- Dsize:832/0x340
+#banks:2 Bank list:-HI00HI01-
+\endcode
+ 
+
+- <b> Example 2 : dump the bank CYCI in decimal format  </b>
+\code
+[pol@isdaq01 pol]$ mdump -b CYCI -l 2 -f d
+-4506 -- Enter <!> to Exit ------- Midas Dump ---
+------------------------ Event# 1 ------------------------
+Bank -CYCI- not found (2) in #banks:2 Bank list:-HI00HI01-
+------------------------ Event# 2 ------------------------
+#banks:2 Bank list:-CYCIHSCL-
+Bank:CYCI Length: 36(I*1)/9(I*4)/9(Type) Type:Unsigned Integer*4
+   1->       16       16        1        0        4        0        0        0
+   9->        0
+@endcode
+  
+
+<br><hr><br>
+
+@section RC_rmidas_utility rmidas       - ROOT Midas application for histograms/run control
+\anchor idx_rmidas-utility
+ Root/Midas remote GUI application for root histograms and possible run control under the ROOT.
+ environment.
+
+<span class="new">
+Users of this utility may also be interested in a @ref RC_ROOT_analyzer_page written for  @ref RC_mhttpd "mhttpd", (Dec 2009)
+</span>
+
+- <b> Arguments </b>
+  - [-h ] : help
+  - [-h hostname ] : host name 
+  - [-e exptname ] : experiment name
+- <b> Usage </b>
+  to be written.
+- <b> Example </b>
+ \code
+ >rmidas midasserver.domain
+ @endcode
+ 
+ * <center> rmidas display sample. Using the example/experiment/ demo setup.
+ *  \image html rmidas.jpg
+ * </center> 
+ 
+
+
+<hr>
+
+ @section RC_hvedit_utility hvedit       - High Voltage editor and GUI
+\anchor idx_hvedit-utility
+ High Voltage editor, graphical interface to the Slow Control System. Originally for
+ Windows machines, but recently ported on Linux under Qt by Andreas Suter.
+
+- <b> Arguments </b>
+  - [-h ] : help
+  - [-h hostname ] : host name 
+  - [-e exptname ] : experiment name
+  - [-D ] : start program as a daemon
+- <b> Usage </b>:
+  To control the high voltage system, the program HVEdit can be used under Windows 95/NT.
+  It can be used to set channels, save and load values from disk and print them.
+  The program can be started several times even on different computers.
+  Since they are all linked to the same ODB arrays, the demand and measured values are
+  consistent among them at any time. HVEdit is started from the command line:
+- <b> Example </b>
+ \code
+ >hvedit
+ @endcode
+
+
+
+
+
+
+
+<!-- Navigation -->
+<br>
+\htmlonly
+<script type="text/javascript">
+pages( "RC_Sequencer" ,"RunControl", "RC_customize_ODB","RC_Monitor","" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+\anchor end
+*/  <!-- end of page RC_Monitor -->
+
+
+/*! @page RC_customize_ODB Customizing the Experiment
+<br>
+\htmlonly
+<script type="text/javascript">
+pages("RC_Monitor" ,"RunControl", "RC_Hot_Link", "RC_customize_ODB","end" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+
+@section RC_customize_intro Introduction
+
+When the MIDAS system is installed, the ODB is loaded with default values, which will provide the user
+with a working system. However, by customizing the ODB, the user can enable powerful features, thus providing
+him or herself with very sophisticated DAQ system to suit almost every experiment. The user
+may even wish to customize their experiment further by providing   @ref RC_mhttpd_Custom_page "custom web-pages"
+for their particular application. 
+ 
+Customizing the ODB for Run Control involves some or all of: 
+ - setting up the @ref  RC_Edit_On_Start "Edit-on-Start" parameters
+ - setting up @ref RC_Access_Control "Access control (web security)"
+ - setting up @ref RC_Lock_when_Running "write-protection when running"
+ - setting up @ref RC_Hot_Link "hot-links"
+ - setting up the  @ref F_Logging_Data "data logging"
+ - setting up the  @ref F_History_logging "history logging"
+ - setting up scripts to act at end and begin of run
+ - setting up  the @ref  RC_Alarm_System
+ - setting up @ref RC_mhttpd_Alias_page "alias links"
+ - setting up the  @ref F_Elog "elog"
+ - setting up the @RC_Sequencer and @ref  RC_Edit_On_Sequence_subdir
+ - setting up @ref RC_Status_Items_subdir "Status Items"
+ - changing the @ref customize_buffer_sizes "size of the Midas buffers"
+ 
+
+Other customization may include
+ - @ref RC_starting_clients
+
+ 
+
+Some of this customization has already been described, such as setting up the data and history logging and
+the electronic logbook (see @ref Features). Further customization will be described in the following
+sections.  
+
+<hr>
+
+\anchor idx_ODB_tree_Experiment
+@section RC_ODB_Experiment_Tree The ODB /Experiment tree
+
+When initially created by the MIDAS installation, the ODB <span class="odb">/Experiment</span> tree contains the following keys:
+
+\code
+[local:t2kgas:S]/>ls -rlt /experiment
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Experiment                      DIR
+    Name                        STRING  1     32    13m  0   RWD  t2kgas
+    Buffer sizes                DIR
+        SYSMSG                  DWORD   1     4     25h  0   RWD  100000
+    Menu Buttons                STRING  1     256   25h  0   RWD  Start, ODB, Messages, ELog, Alarms, Programs, History, MSCB, Config, Help
+@endcode
+
+The meaning of these keys is explained @ref  RC_Experiment_tree_keys "below".
+
+<br>
+@subsection RC_Experiment_tree_keys Explanation of the keys in the ODB /Experiment tree 
+\anchor RC_customize_mhttpd_run_buttons
+This table also includes some of the <b>optional keys</b> that the user may create.
+
+\Note that parameters  <span class="odb">Menu Buttons</span> and  <span class="odb">Hide Run Buttons</span> allow the customization of the
+run control buttons appearing on the @ref RC_mhttpd_Main_Status_page . They have no effect when running @ref RC_odbedit_utility "odbedit";
+
+
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+<caption>Above: Explanation of keys in /Experiment ODB tree</caption>
+<tr align="center">
+<td colspan="4" rowspan="1"
+style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; font-size: 125% ;">
+Keys in /Experiment ODB tree<br>
+</td>
+</tr>
+<tr>
+<td colspan="2"
+style="vertical-align: top; font-weight: bold; text-align: center; background-color: rgb(204, 204, 255);">Key<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; text-align: center; background-color: rgb(204, 204, 255);">Type<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; text-align: center; background-color: rgb(204, 204, 255);">Explanation<br>
+</td>
+</tr>
+<!-- line 1 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Name<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">STRING<br>
+</td>
+<td style="vertical-align: top;">Contains the name of the
+experiment. Filled automatically when the ODB is created.</td>
+</tr>
+
+
+<!-- line 2 Buffer Sizes -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Buffer
+Sizes<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+
+<td style="vertical-align: top;">Contains the sizes of the \b Midas \b Buffers for the experiment. Created with default values. The sizes can be
+changed to optimize the memory usage. See @ref FE_event_buffer_size  for details. 
+</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"> <br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">SYSMSG
+</td>
+<td style="vertical-align: top;">DWORD
+</td>
+<td style="vertical-align: top;">Size of SYSMSG buffer</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">SYSTEM
+</td>
+<td style="vertical-align: top;">DWORD
+</td>
+<td style="vertical-align: top;">Size of SYSTEM buffer </td>
+</tr>
+
+
+
+<!-- line 3  Menu Buttons  -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">
+\anchor experiment_menu_buttons Menu Buttons<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">STRING<br>
+</td>
+
+<td style="vertical-align: top;">
+This key added automatically by  mhttpd <span class="new"> (since  @ref ndf_dec_2009). </span> to allow
+the @ref  RC_mhttpd_status_menu_buttons that appear on the mhttpd @ref RC_mhttpd_Main_Status_page to
+be customized.
+The default set of buttons is <b>Start, ODB, Messages, ELog, Alarms, Programs, History, MSCB Config, Help</b>
+
+
+</td>
+</tr>
+
+<!-- line 4  optional Hide Run Buttons  -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">
+\anchor experiment_hide_run_buttons Hide Run Buttons<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">BOOL<br>
+</td>
+<td style="vertical-align: top;">
+Optional key -  hides the @ref RC_mhttpd_status_RC_buttons on the
+mhttpd Main Status Page if set to "y" <span class="new"> (since  @ref ndf_nov_2009 ). </span>
+</td>
+</tr>
+
+<!-- Line 5   Edit on Start -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Edit
+on Start<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">This subdirectory may
+contain user-defined keys or links to other ODB keys (often in the "/Experiment/Run Parameters" subdirectory)  which
+will be displayed for editing at the beginning of each run.
+See @ref RC_Edit_On_Start for details.
+</td>
+</tr>
+
+<!-- Line 6 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Edit run number
+</td>
+<td style="vertical-align: top;">BOOL
+</td>
+<td style="vertical-align: top;">Optional key. If present and set to "y" will @ref RC_Prevent_Edit_RN .
+Active for  <span class="utility">mhttpd</span> only (ignored by  <span class="utility">odbedit</span>)  </td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">user defined
+</td>
+<td style="vertical-align: top;"><br>
+</td>
+
+<td style="vertical-align: top;">Any number of user-defined keys or links may be defined (i.e. the edit-on-start parameters). See
+example  @ref RC_Experiment_Tree_Example "below" </td>
+</tr>
+
+<!--  Lock when Running -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Lock
+when running<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">An optional subdirectory
+that may be created by the user 
+</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">user defined
+</td>
+<td style="vertical-align: top;"><br>
+</td>
+
+<td style="vertical-align: top;">may contain user-defined links to keys that are to be write-protected when a run is in progress.
+See @ref RC_Lock_when_Running  for details.</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Parameter
+Comments<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">Optional subdirectory may be
+created by the user.<br>
+</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">user defined
+</td>
+<td style="vertical-align: top;"><br>
+</td>
+<td style="vertical-align: top;">Optional keys may be
+created by the user to contain parameter comments associated with the  
+@ref RC_Edit_On_Start "Edit on Start" Parameters. See @ref RC_Edit_PC for details.
+Active for <span class="utility"</span>>mhttpd only (ignored by  <span class="utility">odbedit</span>) 
+</td>
+</tr>
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Security<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">subdirectory for user to set up
+security features. See @ref RC_Access_Control "Security" for details </td>
+</tr>
+
+<!-- Run Parameters -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Run Parameters<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">An optional subdirectory
+that may be created by the user 
+</td>
+</tr>
+
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Comment
+</td>
+<td style="vertical-align: top;">BOOL
+</td>
+<td style="vertical-align: top;">Optional key. If present, will be @ref RC_Edit_RP "displayed on mhttpd main status page". 
+See  @ref RC_Run_Parameters .
+Active for  <span class="utility">mhttpd</span> only (ignored by  <span class="utility">odbedit</span>)  </td>
+</tr>
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Run Description
+</td>
+<td style="vertical-align: top;">BOOL
+</td>
+<td style="vertical-align: top;">Optional key. If present, will be   @ref RC_Edit_RP "displayed on mhttpd main status page". 
+Active for <span class="utility">mhttpd</span> only (ignored by   <span class="utility">odbedit</span>) 
+See  @ref RC_Run_Parameters .
+ </td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">user defined
+</td>
+<td style="vertical-align: top;"><br>
+</td>
+
+<td style="vertical-align: top;">Any number of user-defined keys or links may be defined (often used to contain the edit-on-start parameters). See
+example  @ref RC_Experiment_Tree_Example "below" </td>
+</tr>
+
+
+
+<!-- Status Items -->
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Status
+Items<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">An optional subdirectory
+that may be created by the user 
+</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">user defined
+</td>
+<td style="vertical-align: top;"><br>
+</td>
+
+<td style="vertical-align: top;">may contain user-defined ODB keys or  links to keys whose names and contents are to be 
+@ref  RC_Status_Items "displayed on the mhttpd main status page".
+See @ref RC_Status_Items_subdir </td>
+</tr>
+
+
+<!-- Edit on Sequence -->
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Edit on Sequence<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR<br>
+</td>
+<td style="vertical-align: top;">An optional subdirectory
+that may be created by the user 
+</td>
+</tr>
+
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">user defined
+</td>
+<td style="vertical-align: top;"><br>
+</td>
+
+<td style="vertical-align: top;">may contain user-defined ODB keys or  links to keys whose names and contents are to be displayed
+when the Sequencer is started (by  <span class="utility">mhttpd</span>). See @ref RC_Edit_On_Sequence_subdir .</td>
+</tr>
+
+
+
+</table>
+
+
+@subsection RC_Experiment_Tree_Example  Example of an  ODB /Experiment tree with optional subdirectories
+
+An example of a typical <span class="odb">/Experiment</span> tree  containing various optional keys is shown below.
+
+
+\code
+
+[local:midas:S]/>ls -rlt /experiment
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Experiment                      DIR
+    Name                        STRING  1     32    14s  0   RWD  midas
+    Hide Run Buttons            BOOL    1     4     3h   0   RWD  n
+    Buffer sizes                DIR
+        SYSMSG                  DWORD   1     4     56h  0   RWD  100000
+        SYSTEM                  DWORD   1     4     56h  0   RWD  8388608
+    Menu Buttons                STRING  1     256   25h  0   RWD  Start, ODB, Messages, ELog, Alarms, Programs, History, MSCB, Config
+    Run Parameters              DIR
+        Comment                 STRING  1     32    3m   0   RWD   no beam, test only
+        Run Description         STRING  1     32    3m   0   RWD  28.2keV resonant energy 7Li
+        Sample                  STRING  1     15    3h   0   RWD  NA
+    Edit on Start               DIR
+        run_title -> /Experiment/run parameters/Run Description
+                                STRING  1     32    3m   0   RWD  28.2keV resonant energy 7Li
+        run_comment -> /Experiment/run parameters/comment
+                                STRING  1     32    3m   0   RWD   no beam, test only
+        experiment number       DWORD   1     4     3h   0   RWD  12
+        experimenter            STRING  1     32    3h   0   RWD  Douglas,Thomas,Minnie
+        sample ->  /Experiment/run parameters/Sample
+                                STRING  1     15    3h   0   RWD  NA
+        orientation             STRING  1     15    3h   0   RWD
+        temperature             STRING  1     15    3h   0   RWD
+        field                   STRING  1     15    3h   0   RWD
+        Element                 STRING  1     24    3h   0   RWD  li
+        Mass                    INT     1     4     3h   0   RWD  7
+        DC offset(V)            INT     1     4     3h   0   RWD  0
+        Ion source (kV)         DOUBLE  1     8     3h   0   RWD  28
+        Laser wavelength (nm)   DOUBLE  1     8     3h   0   RWD  14859.952
+        write data -> /Logger/Channels/0/Settings/Active
+                                BOOL    1     4     3h   0   RWD  y
+        Number of scans -> /Equipment/FIFO_acq/sis mcs/hardware/num scans
+                                INT     1     4     3h   0   RWD  10
+        Source HV Bias          STRING  1     12    3h   0   RWD  ISAC-WEST
+        Edit run number         BOOL    1     4     3h   0   RWD  n
+        Pedestals run           BOOL    1     4     3h   0   RWD  n
+    Lock when running           DIR
+        dis_rn_check -> /Equipment/FIFO_acq/mdarc/disable run number check
+                                BOOL    1     4     56h  0   RWD  n
+        SIS test mode -> /Equipment/FIFO_acq/sis mcs/sis test mode
+                                KEY     1     12    >99d 0   RWD  <subdirectory>
+        PPGinput -> /Equipment/FIFO_acq/sis mcs/Input
+                                KEY     1     12    >99d 0   RWD  <subdirectory>
+        SIS ref A -> /Equipment/FIFO_acq/sis mcs/Hardware/Enable SIS ref ch1 scaler A
+                                BOOL    1     4     56h  0   RWD  n
+        SIS ref B -> /Equipment/FIFO_acq/sis mcs/Hardware/Enable SIS ref ch1 scaler B
+                                BOOL    1     4     56h  0   RWD  y
+    Parameter Comments          DIR
+        Active                  STRING  1     36    56h  0   RWD  <i>Enter y to save data to disk</i>
+        Num scans               STRING 1     80    56h  0   RWD  <i>Stop run after num scans is reached. Enter 0 to disable (free running)</i>
+        Num cycles              STRING  1     80    56h  0   RWD  <i>Stop run after num cycles is reached. Enter 0 to disable (freerunning)</i>
+        Source HV Bias          STRING  1     80    56h  0   RWD  <i>Enter one of 'OLIS', 'ISAC-WEST' or 'ISAC-EAST' </i>
+    Transition debug flag       INT     1     4     21h  0   RWD  0
+    Transition connect timeout  INT     1     4     21h  0   RWD  10000
+    Transition timeout          INT     1     4     21h  0   RWD  120000
+    security                    DIR
+        Web Password            STRING  1     32    15h  0   RWD  mim2Q41CV.GW3
+    Status Items                DIR
+        Experimenters           STRING  1     32    55m  0   RWD  none
+        Target                  STRING  1     104   2h   0   RWD  <span style="font-weight: bold; background-color: fuchsia; color: cyan">Liquid Helium</span>
+        Number of channels -> /Equipment/TITAN_ACQ/ppg_cycle_mode_1e/image/num channels to display
+                                INT     1     4     3h   0   RWD  24
+        pulse width (ms) -> /Equipment/TITAN_ACQ/ppg cycle/pulse1/pulse width (ms)
+                                DOUBLE  1     8     1h   0   RWD  120
+    Edit on sequence            DIR
+        Initial pulse width (ms) -> /Equipment/TITAN_ACQ/ppg cycle/pulse1/pulse width (ms)
+                                DOUBLE  1     8     1h   0   RWD  120
+        comment                 STRING  1     128   1h   0   RWD  starting width  120ms, incr 5ms per run
+        counter                 INT     1     4     1h   0   RWD  10
+  @endcode  
+
+The meaning of these keys is described  @ref  RC_Experiment_tree_keys "above" and in the following sections.
+
+
+\anchor idx_ODB_tree_Experiment_Customize
+\anchor idx_ODB_tree_Experiment_Parameter-comments
+
+@subsection  RC_customize_experiment_tree Customizing parameters under the ODB /Experiment tree
+ 
+The user can optionally create the following 
+subdirectories under the  <span class="odb">/Experiment</span> tree if they do not exist already. These must have the names
+<b>
+ - <span class="odb">/Experiment/</span> 
+    -  @ref RC_Edit_On_Start "Edit on Start"
+    -  @ref RC_parameter_comments "Parameter Comments"  
+    -  @ref RC_Run_Parameters "Run Parameters"            
+    -  @ref RC_Lock_when_Running "Lock when running"
+    -  @ref RC_Access_Control "Security"
+    -  @ref RC_Status_Items_subdir "Status Items"
+    -  @ref RC_Edit_On_Sequence_subdir "Edit on Sequence"
+
+</b>
+These keynames have a particular meaning for the MIDAS system which will be described below. 
+
+
+<br><hr><br>
+\anchor idx_run_start_parameters
+
+@subsubsection RC_Edit_On_Start Defining Edit-on-start Parameters
+
+With \b no optional "edit-on-start" parameters set up,
+when a run is started,
+ - either by the @ref RC_odbedit_utility "odbedit" command @ref  RC_odbedit_start "start"
+ - or by clicking the @ref RC_mhttpd_utility "mhttpd"  <span class="button">Start</span> button (see @ref RC_mhttpd_status_menu_buttons "menu buttons" ) on the mhttpd main status page
+
+
+
+a <b> TR_START transition </b> is received, and the <b>run number</b> of the upcoming run will be displayed for editing. 
+It will have been <b>automatically incremented</b> relative to the last run.
+
+The following example shows a run started using <span class="utility"> odbedit</span>. See   (see @ref RC_mhttpd_Start_page) ,
+
+
+ The default run number of the next run
+is 30499. The user has changed this to 500.
+\code
+[local:bnmr:S]/Experiment>start
+Run number [30499]: 500
+Are the above parameters correct? ([y]/n/q): 
+
+
+@endcode
+
+
+\anchor idx_edit-on-start
+\anchor idx_ODB_tree_Experiment_Edit-on-Start-parameters
+
+ It is often convenient to <b>display and edit additional parameters </b> when a run is started.
+These parameters are known as <b>Edit-on-start</b> parameters since
+they automatically appear every time a run starts, and they are editable by the user.
+\b Edit-on-start parameters are defined  by creating them or linking to them in a special subdirectory  named
+<span class="odb">"Edit on start"</span>  that the 
+user may create in the ODB @ref  RC_ODB_Experiment_Tree "/Experiment tree".  
+Links can point to any ODB key including the logger settings. It is often convenient to create a link to 
+the logger setting which enables/disables writing of data. A quick test run can then be made without data logging,
+for example:
+\code
+[local:bnmr:S]/Experiment>start
+Write data : n
+Run number [30499]:
+Are the above parameters correct? ([y]/n/q):  
+@endcode
+
+The first step to setting up the <b>Edit on Start</b> parameters is to <b>create the subdirectory 
+"Edit on Start"</b> in the ODB under <b>/Experiment</b> as shown below. For simplicity, the examples below
+use   @ref RC_odbedit_utility "odbedit" to edit the ODB. However, users may prefer to use the mhttpd  
+@ref RC_mhttpd_ODB_page instead.
+
+\code
+$odbedit
+[local:Default:S]/>cd /experiment
+[local:Default:S]/Experiment>mkdir "Edit on start"
+[local:Default:S]/Experiment>cd "Edit on start"
+[local:Default:S]/Edit on start>
+@endcode
+
+
+
+\anchor RC_rp
+Then the user either <b>creates the required parameters</b>, or, if the parameters already exist elsewhere in the 
+ODB, <b>creates links to the parameters</b> in the  <span class="odb">Edit on start</span> subdirectory. Many users find it
+convenient to create their run parameters in a subdirectory of  <span class="odb">/Experiment</span> named <b>"Run Parameters"</b>, and
+create links to them in the <span class="odb">Edit on start</span> subdirectory. 
+
+<br><br>The example below shows the creation of three parameters in the  <span class="odb">Edit on start</span>
+subdirectory:
+<ol>
+ <li> a \b parameter to contain the title of the run (called "run_title")
+        <br> The user will be able to enter the title of each run before it starts 
+ <li> a \b link to the ODB parameter   <span class="odb">/Logger/Write data</span>   
+        <br>  It can make sense to create a link to the logger setting which enables/disables writing
+                 of data. A quick test run can then be made without data logging
+ <li> a \b link to the ODB parameter <span class="odb">/Equipment/FIFO_acq/hardware/num scans</span> which has been previously
+      created by the user
+ <li> a \b link to the ODB parameter  <span class="odb">/Equipment/Run Parameters/Sample</span>  which has been previously
+      created by the user
+</ol>
+
+\code
+[local:Default:S]/Edit on start>
+[local:Default:S]/Edit on start>create string run_title
+String length [32]:128
+[local:Default:S]/Edit on start>ln "/Logger/Write data" "write data"
+[local:Default:S]/Edit on start>ln "/Equipment/FIFO_acq/hardware/num scans" "Number of scans"
+[local:Default:S]/Edit on start>ln "/Experiment/Run Parameters/Sample" "sample"
+@endcode
+
+Here is an example of the <b>Edit on start</b> parameters from an experiment:
+
+
+\code
+[local:Default:S]Edit on start>ls -lt
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+run_title                       STRING  1     128   3h   0   RWD  2e test
+experiment number               DWORD   1     4     3h   0   RWD  9999
+experimenter                    STRING  1     32    3h   0   RWD  gdm
+sample                          STRING  1     23    3h   0   RWD  /Experiment/Run Parameters/Sample -> NA
+orientation                     STRING  1     15    11h  0   RWD  
+temperature                     STRING  1     32    3h   0   RWD  285.12K
+field                           STRING  1     32    3h   0   RWD  0G
+Number of scans                 INT     1     4     11h  0   RWD  /Equipment/FIFO_acq/hardware/num scans -> 0
+write data                      BOOL    1     4     7s   0   RWD  /Logger/Write data -> y
+Edit run number                 BOOL    1     4     11h  0   RWD  n
+@endcode
+
+\Note that the "Edit run number" feature (that prevents editing the run number) is available for <span class="utility">mhttpd</span> only. See  @ref RC_Prevent_Edit_RN .
+
+ 
+\b Examples of starting a run with <b> edit on start </b> parameters are shown here:
+  - using @ref RC_EOS_example2 "odbedit" or
+  - using   @ref RC_mhttpd_Edit_On_Start "mhttpd" 
+
+
+<br><hr><br>
+
+
+
+<!-- \level+ -->
+@subsubsection RC_parameter_comments  Parameter Comments subdirectory
+Optional parameter comments (in the <span class="odb">/Experiment/Parameter Comments</span> subdirectory) can be set up to give more information about the Edit-on-Start parameters.
+This feature is only active when using  <span class="utility">mhttpd</span>. Setting up @ref RC_Edit_PC is described in the mhttpd
+@ref RC_mhttpd_Start_page section.
+
+
+<br><hr><br>
+
+
+<!-- \level+ -->
+@subsubsection RC_Edit_On_Sequence_subdir  Edit-on-Sequence parameters
+ <span class="new">New since  @ref ndf_jun_2011  </span>
+
+\i Edit-on-sequence parameters are displayed for edit when a new @RC_Sequencer "Sequence" is started (similar to the @ref RC_Edit_On_Start "edit-on-start" parameters that 
+appear when a run is started). \i Edit-on-sequence parameters may be defined in the optional <span class="odb"> Edit on Sequence</span> subdirectory in the same way that 
+\i Edit-on-start parameters are defined in the <span class="odb">Edit on Start</span> subdirectory.
+
+
+An example of \i edit-on-sequence parameters defined in the ODB are shown below. 
+ * <center> 
+ * <span class="image">Example of edit-on-sequence parameters</span>
+ * <br><br><br>
+ * \image html edit_on_seq.png
+ * </center>
+
+These parameters will be displayed for edit on the @ref RC_Seq_start "sequencer start page".  
+
+<br><hr><br>
+
+
+<!-- \level+ -->
+@subsubsection RC_Run_Parameters Run Parameters subdirectory
+Users often create a subdirectory  <span class="odb">/Experiment/Run Parameters</span> to contain any  parameters needed for the run.
+These may be the subject of links from the  <span class="odb">Edit on start</span> subdirectory (see  @ref RC_rp "example above"). 
+<br>
+Two optional keys in this directory have special meaning when running  <span class="utility">mhttpd</span>.
+
+If the following key(s) are created in the  <span class="odb">"Run Parameter"</span> subdirectory
+ -  <span class="odb">Comment</span> or 
+ -  <span class="odb">Run Description</span>
+
+the contents of each key will be displayed on an extra line on the  <span class="utility">mhttpd</span> main status page.
+See  @ref RC_Edit_RP for details. 
+
+\Note
+If running the  @ref RC_Sequencer, the <span class="odb">Run Description</span> key may be set with the <span class="seq"></RunDescription></span> tag. 
+
+
+
+<br><hr><br>
+
+
+
+<!-- \level+ -->
+@subsubsection RC_Status_Items_subdir  Status Items subdirectory 
+ <span class="new">New since  @ref  ndf_feb_2011  </span>
+<br>
+Users may create a subdirectory  <span class="odb">/Experiment/Status Items</span>.
+Any keys or links created in this optional subdirectory will be displayed on the  <span class="utility">mhttpd</span> main status page.
+See @ref  RC_Status_Items . 
+
+
+
+<br><hr><br>
+
+
+
+\anchor idx_ODB_tree_Experiment_Lock-when-Running
+@subsubsection RC_Lock_when_Running  Lock when Running
+
+Often it is desirable that various experimental ODB parameters should not to be changed when a run
+is in progress, i.e. that they are set to a "read-only" mode while running.
+This can be done by creating logical links to these ODB keys in the optional directory <b> "Lock when Running" </b>
+in the @ref  RC_ODB_Experiment_Tree. 
+<br>
+  In the example below, all the parameters under the declared tree will
+  be switched to read-only, thus  preventing any modification of these parameters during the run.
+  \code
+  [local]/>create key "/Experiment/Lock when running"
+  [local]/>cd "/Experiment/Lock when running"
+  [local]/>ln "/Experiment/Run parameters" "Run parameter"
+  [local]/>ln "/Logger/Write Data" "Write Data?"
+  @endcode 
+
+In the following example, the user attempts to change one of the read-only parameters:
+\code
+[local:bnmr:R]/>set "/Logger/Write Data" y
+Write access not allowed
+@endcode
+
+
+
+<br><hr><br>
+
+
+\anchor idx_access-control_ODB
+\anchor idx_ODB-access-control
+@subsubsection RC_Access_Control Access Control (Security) using the ODB
+
+\note
+To prevent access by determined or malicious hackers, a \b firewall and/or <b>restrictions on off-site
+access</b> should be implemented. This kind of security can be provided by setting up @ref RC_mhttpd_proxy .
+<br>
+
+
+By default, there is no restriction for any user to connect locally or remotely
+to a given experiment. MIDAS provides a means to setup access restrictions using the ODB 
+in order to protect the experiment from accidental or unauthorized access.
+
+There are two levels of access restriction available each of which can be enabled independently:
+- To require a password before MIDAS clients can start running on the host. 
+- To restrict write access via the web by requiring a password before any parameter can be changed.
+
+The user can select \b either or \b both of these security features.
+
+Note that other forms of ODB access control independent of these security features is also available:
+
+        - Write access can be restricted during a run (see  @ref RC_Lock_when_Running )
+        - Individual keys or subdirectories in the experiment's ODB can be set "read only" with the
+             <span class="utility">odbedit</span> command @ref  RC_odbedit_chmod "chmod".
+  
+   
+
+<br><hr><br>
+
+
+
+\anchor idx_ODB_tree_Experiment_Security
+<!-- \level+  following should be  subsubsubsection (contents hierarchy) -->
+@subsubsection RC_Setup_Security How to Setup Client Access Restrictions
+
+\anchor idx_access-control_client
+In order to  @ref RC_Access_Control "restrict access" to the experiment, a password mechanism needs to be defined. This is
+provided by the "Security" subdirectory in odb. This subdirectory 
+is automatically created (if not already present) when the @ref RC_odbedit_utility "odbedit" command <b>passwd</b>
+is issued as follows:
+  \code
+  C:\online>odbedit
+  [local:Default:S]/>cd Experiment/
+  [local]/>passwd
+  Password:<xxxx>
+  Retype password:<xxxx>
+  @endcode 
+  After running the odb command "passwd", three new sub-fields (odb keys) will be present under
+  the <span class="odb">/Experiment/Security</span> subtree.
+
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="2">
+<caption>Above: Explanation of keys in ODB /Experiment/Security subtree</caption>
+<tr align="center">
+<td colspan="4" rowspan="1"
+style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; font-size: 125% ;">
+Keys in ODB /Experiment/Security subtree<br>
+</td>
+</tr>
+<tr>
+<td  colspan="2"
+style="vertical-align: top; font-weight: bold; text-align: center; background-color: rgb(204, 204, 255);">Key<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; text-align: center; background-color: rgb(204, 204, 255);">Type<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; text-align: center; background-color: rgb(204, 204, 255);">Explanation<br>
+</td>
+</tr>
+<!-- line 1 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Password
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">STRING<br>
+</td>
+<td style="vertical-align: top;">Contains the encrypted password.  Key is created when @ref RC_odbedit_utility "odbedit" command <b>passwd</b> is issued.
+</td>
+</tr>
+
+
+<!-- Line 5 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Allowed hosts<br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR
+</td>
+<td style="vertical-align: top;">This key is created when @ref RC_odbedit_utility "odbedit" command <b>passwd</b> is issued. Subdirectory may contain
+names of remote hosts  allowed to have free access (i.e. without password) to the current experiment. See @ref RC_security_allowed_hosts .
+</td>
+</tr>
+
+<!-- Line 6 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">pierre.triumf.ca
+</td>
+<td style="vertical-align: top;"><br>INT
+</td>
+<td style="vertical-align: top;"><br>Example - name of a host allowed password-less access to experiment (key created by the user).
+</td>
+</tr>
+
+<!-- Line 8 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Allowed programs
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">DIR
+</td>
+<td style="vertical-align: top;">This key is created when @ref RC_odbedit_utility "odbedit" command <b>passwd</b> is issued. Subdirectory may contain
+names of clients allowed to have free access (i.e. without password) to the current experiment.  See @ref RC_security_allowed_programs .
+</td>
+</tr>
+
+<!-- Line 9 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">mstat
+</td>
+<td style="vertical-align: top;"><br>INT
+</td>
+<td style="vertical-align: top;"><br>Example - name of a client (run from any host) allowed password-less access to the experiment (key created by the user).
+</td>
+</tr>
+
+
+
+
+<!-- Line 10 -->
+<tr>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;">Web Password
+</td>
+<td
+style="vertical-align: top; font-weight: bold; background-color: lightyellow;"><br>
+</td>
+<td style="vertical-align: top;">STRING<br>
+</td>
+<td style="vertical-align: top;">This key specifies a separate encrypted
+password for Web server access.  Key is created when @ref RC_odbedit_utility "odbedit" command <b>webpasswd</b> is issued.
+See  @ref RC_Setup_Web_Security "Web Access restriction".
+</td>
+</tr>
+
+</table>
+  
+
+                     
+<!-- \level+  subsubsubsection -->
+@subsubsection RC_security_allowed_hosts Allowed Hosts
+
+This key is a fixed directory name where names of remote hosts
+  can be defined for free access to the current experiment.
+  While the access restriction can make sense to deny access to outsider to a
+  given experiment, it can be annoying for the people working directly at the
+  back-end computer or for the automatic frontend reloading mechanism
+  (MS-DOS, VxWorks configuration). To address this problem, specific hosts
+  can be exempt from having to supply a password before being granted of full access.
+
+  \code
+
+  [local]/>cd "/Experiment/Security/Allowed hosts"
+  [local]rhosts>create int myhost.domain
+  [local]rhosts>
+  @endcode 
+       where \<myHost.domain\> is to be replaced by the full IP address of the host
+  requesting full clearance, e.g "pierre.triumf.ca".
+
+
+<!-- \level+  subsubsubsection -->  
+@subsubsection RC_security_allowed_programs Allowed programs
+This key is a fixed directory name where a list of programs 
+  can be defined that have full access to the ODB <em>regardless of the node they 
+  are running on.</em>
+  \code
+  [local]/>cd "/Experiment/Security/Allowed programs"
+  [local]:S>create int mstat
+  [local]:S>
+  @endcode 
+  <br><br>
+
+
+<br><hr><br>
+\anchor idx_ODB_tree_Experiment_Security_Restrict-Web-access
+@subsubsection RC_Setup_Web_Security How to Setup Web Access Restriction
+\anchor idx_access-control_web
+
+\Note  This section is only applicable to access using  <span class="utility">mhttpd</span> (i.e. web access). Access with <span class="utility">odbedit</span> is unaffected.
+
+
+The ODB <span class="odb">/Experiment/Security</span> subtree can also be used to  @ref RC_Access_Control "restrict access" to the experiment via the Web.
+This subtree 
+is automatically created (if not already present) when the <span class="utility">odbedit</span> command <b>webpasswd</b>
+  is issued as follows:
+  \code
+  C:\online>odbedit
+  [local:Default:S]/>cd Experiment/
+  [local]/>webpasswd
+  Password:<xxxx>
+  Retype password:<xxxx>
+  @endcode 
+
+  After running \b webpasswd, one new sub-field (odb key) i.e. <b>"Web Password"</b> will be present under
+  the Security tree. If, of course, @ref RC_Setup_Security "client security" is ALSO enabled, there will now be a total of four keys present.
+
+<!-- \level+  subsubsubsection -->  
+ @subsubsection RC_security_web_pw Web Password
+
+This key specifies a separate password for the Web server access via
+@ref RC_mhttpd_utility "mhttpd". If this field is active, the user will be requested to
+provide the "Web Password" when accessing the requested experiment in 
+"Write Access" mode (see  @ref RC_mhttpd_ODB_page "example").  The "Read Only Access" mode is still available to all users.
+\code
+[local:bnqr:S]/Experiment>ls Security/
+Web Password                    pon4@#@%SSDF2
+@endcode
+
+
+<hr>
+
+@subsubsection RC_Example_security Examples of Access Control using the ODB Security subtree 
+
+The following examples illustrate @ref RC_Access_Control "access control" using the ODB Security features:
+<!-- \level+  subsubsubsection -->  
+@subsubsection RC_Example_full_security Example of Full access control  setup for an experiment
+
+The following example shows the odb when <b>both client and web security</b> have been
+setup. If client security \b only is enabled, the key "Web Password" would not be present.
+
+\code
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Experiment                      DIR
+    Security                    DIR
+        Password                STRING  1     32    16h  0   RWD  #@D&%F56
+        Allowed hosts           DIR
+            host.sample.domain  INT     1     4     >99d 0   RWD  0
+            pierre.triumf.ca    INT     1     4     >99d 0   RWD  0
+            pcch02.triumf.ca    INT     1     4     >99d 0   RWD  0
+            koslx1.triumf.ca    INT     1     4     >99d 0   RWD  0
+            koslx2.triumf.ca    INT     1     4     >99d 0   RWD  0
+            vwchaos.triumf.ca   INT     1     4     >99d 0   RWD  0
+            koslx0.triumf.ca    INT     1     4     >99d 0   RWD  0
+        Allowed programs        DIR
+            mstat               INT     1     4     >99d 0   RWD  0
+            fechaos             INT     1     4     >99d 0   RWD  0
+        Web Password            STRING  1     32    16h  0   RWD  pon4@#@%SSDF2
+@endcode 
+
+<br><hr><br>
+<!-- \level+  subsubsubsection -->  
+@subsubsection RC_Example_web_security Example of Web-Only access control setup for an experiment
+
+The following example shows the odb when <b>web security only</b> has been enabled. 
+See also @ref RC_Example_full_security
+\code
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Experiment                      DIR
+    Security                    DIR
+        Web Password            STRING  1     32    16h  0   RWD  pon4@#@%SSDF2
+@endcode
+
+
+
+<hr>
+\anchor idx_ODB_tree_Experiment_Security_Remove-Access-restrictions
+@subsubsection RC_Remove_Security To Remove Access Restrictions
+\anchor idx_access-control_remove
+ To remove the full password checking mechanism completely, the ODB security sub-tree has to
+  be entirely deleted using the following command:
+  \code
+  [local]/>rm /Experiment/Security
+  Are you sure to delete the key
+  "/Experiment/Security"
+  and all its subkeys? (y/[n]) y
+  @endcode 
+
+To partially remove access restrictions, remove only those keys relevent to web or client security.
+i.e. to remove web access restriction only, remove the key "Web Password"
+
+  \code
+  [local]/>cd /Experiment/Security
+[local:bnmr:S]Security>ls
+Password                        #@D&%F56
+Allowed hosts
+Allowed programs
+Web Password                    pon4@#@%SSDF2
+
+[local:bnqr:S]Security>rm "Web Password"
+Are you sure to delete the key
+"/Experiment/Security/Web Password"
+(y/[n]) y
+  @endcode 
+
+Client security is retained:
+\code
+[local:bnmr:S]Security>ls
+Password                      #@D&%F56  
+Allowed hosts
+Allowed programs
+@endcode
+
+Alternatively, to retain web security only, delete the keys Password, Allowed hosts and Allowed Programs
+  \code
+  [local]/>cd /Experiment/Security
+[local:bnmr:S]Security>ls
+Password                        #@D&%F56
+Allowed hosts
+Allowed programs
+Web Password                    pon4@#@%SSDF2
+
+[local:bnqr:S]Security>rm "Password"
+[local:bnqr:S]Security>rm "Allowed Hosts"
+[local:bnqr:S]Security>rm "Allowed programs"
+\encode
+
+So that the only key remaining is the Web Password key:
+\code
+[local:bnmr:S]Security>ls
+Web Password                    pon4@#@%SSDF2
+@endcode 
+
+
+<br>
+<hr>
+<br>
+
+
+
+
+@section RC_starting_clients Customize the scripts that start up and shut down the clients.
+\anchor idx_startup_script
+\anchor idx_shutdown_script
+Before a run can be started, all the clients necessary to the experiment must be started. We have already
+seen in  @ref Quickstart that templates of scripts to @ref start-all "start and kill" the required 
+clients are provided in the MIDAS package. These must be customized for your experiment. The following example
+shows  the template start-up script  \b start_daq.sh that starts  
+ - a frontend
+ - an analyzer, 
+ - @ref F_mlogger_utility "MIDAS logger" to save the data  
+ - the run-control/monitoring program @ref RC_mhttpd_utility "mhttpd" 
+and the template kill script \b kill_daq.sh that shuts then all down.
+
+<table
+ style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="0">
+  <caption>Above: Template scripts to start and kill the clients
+  </caption>
+<tr>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+start_daq.sh</td>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+kill_daq.sh</td>
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+\code
+#!/bin/sh
+
+. setup.sh
+
+
+./kill_daq.sh
+
+odbedit -c clean
+
+mhttpd -p 8081 -D
+sleep 2
+xterm -e ./frontend &
+xterm -e ./analyzer &
+mlogger -D
+
+
+echo Please point your web browser to http://localhost:8081
+echo Or run: firefox http://localhost:8081 &
+echo To look at live histograms, run: roody -Hlocalhost
+
+#end file
+@endcode
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br>
+\code
+#!/bin/sh
+
+killall mlogger
+killall mhttpd
+killall frontend
+killall analyzer
+sleep 1
+
+#end file
+@endcode
+</td>
+</tr>
+</table>
+
+@subsection RC_start_all_example Example of a start-all script
+The following is a start-all script from an experiment at TRIUMF. It can be run at any time to restart any clients that
+have stopped. Note that it also starts @ref RC_mserver_utility "mserver", because the frontend is run on a remote host.
+
+\code
+#!/bin/sh
+# Host based
+if [ $HOST == "lxebit.triumf.ca" ]; then
+ echo "run start-all from titan04 only "
+else
+#. setup.sh
+
+
+odbedit -c clean
+#odbedit -c "rm /Analyzer/Trigger/Statistics"
+#odbedit -c "rm /Analyzer/Scaler/Statistics"
+
+
+ps -ef > ~/temp
+grep --silent "mserver" ~/temp
+if [ "$?" != "0" ];  then
+    echo "Starting mserver "
+    $MIDASSYS/linux/bin/mserver -D
+else
+ echo "mserver is already running"
+fi
+rm ~/temp
+
+# Start the http MIDAS server
+ps -ef > ~/temp
+grep --silent "mhttpd -p 8089" ~/temp
+if [ "$?" != "0" ] ; then
+    echo "Starting mhttpd"
+     $MIDASSYS/linux/bin/mhttpd -p 8089 -D
+  else
+ echo mhttpd is already running
+fi
+rm ~/temp
+
+sleep 2
+#xterm -e ./frontend &
+#xterm -e ./analyzer &
+
+# The  MIDAS logger
+# Start the logger
+$MIDASSYS/linux/bin/odbedit -c scl | grep --silent  Logger
+if [ "$?" != "0" ] ; then
+    echo "Starting mlogger"
+    $MIDASSYS/linux/bin/mlogger  -D
+  else
+ echo mlogger is already running
+fi
+
+
+# start the feebit program via remote login on lxebit
+ssh lxebit ~/online/bin/start_feebit_ppg
+
+
+echo Please point your web browser to http://localhost:8089
+#echo Or run: mozilla http://localhost:8089 &
+#echo To look at live histograms, run: roody -Hlocalhost
+fi
+#end file
+
+@endcode
+
+@subsection RC_kill_all_example Example of a kill-all script
+This is the kill-all script for the ebit experiment at TRIUMF.
+
+\code
+#!/bin/sh
+# Host based
+if [ $HOST == "lxebit.triumf.ca" ] ; then
+ echo "run kill-all from titan04 only "
+else
+  killall mserver
+  killall mlogger
+  killall mhttpd
+  killall feebit_ppg
+  killall analyzer
+  sleep 1
+fi
+#end file
+\endcode
+
+<br><hr><br>
+\anchor idx_access-control_remote
+\anchor idx_mserver-utility
+@section RC_mserver_utility  mserver      - MIDAS Remote server
+
+
+<span class="utility">mserver</span> provides remote access to any MIDAS client. It is needed when <b>one or more of the MIDAS clients
+for an experiment are running on a different host</b>. In this case, an <span class="utility">mserver</span> client must be started on the host
+where the experiment resides. 
+
+For example, if there is no <span class="utility">mserver</span> client is running on host dasdevpc2, then an attempt to run a
+client on dasdevpc2 from a remote computer (isdaq01) will result in an error message:
+\code
+[bnmr@isdaq01 ~/online]$ odb -e t2kgas -h dasdevpc2
+Cannot connect to remote host
+\endcode
+If an  <span class="utility">mserver</span> client is now started on  host dasdevpc2, 
+\code
+[suz@dasdevpc2 ~]$ mserver -D
+mserver started interactively
+Becoming a daemon...
+\endcode
+Now one can connect to the remote experiment :
+\code
+[bnmr@isdaq01 ~/online]$ odb -e t2kgas -h dasdevpc2
+[dasdevpc2:t2kgas:S]/>quit
+\endcode
+
+The <span class="utility">mserver</span> utility usually runs in the
+background and doesn't need to be modified. In the case where debugging is required, the
+<span class="utility">mserver</span> can be started with the -d flag which will write an entry for each transaction to
+a log file <i> /tmp/mserver.log </i> . The log entry contains the time stamp and RPC call request.
+<br>
+
+More than one <span class="utility">mserver</span> can be started on a system, provided they use different tcp ports. This is useful if, 
+for example, different versions of MIDAS are in use on a single host at the same time.
+To start a version of <span class="utility">mserver</span> on a different port, use the  -p argument, 
+e.g. mserver -p XXXX -D
+<br> 
+To connect a client to this version of <span class="utility">mserver</span>, use the format "hostname:port", e.g.
+\code
+   fe_test -h lin08:7066 -e expt
+\endcode   
+<br>
+
+@subsection RC_mserver_arguments  mserver arguments
+
+ - <b> Arguments </b>
+   - [-h ] : help
+   - [-s ] : Single process  server
+   - [-t ] : Multi thread server
+   - [-m ] : Multi process server (default)
+   - [-p ] : Port number; listen for connections on non-default tcp port
+   - [-d ] : Write debug info to /tmp/mserver.log
+   - [-D ] : Become a Daemon
+
+
+
+\anchor idx_ODB_tree_Programs
+
+@section RC_ODB_Programs_Tree The ODB /Programs tree
+
+The ODB <b>/Programs</b> tree is created by the system. It contains
+
+ - key <b>Execute on start run</b>
+ - key <b>Execute on stop run</b> 
+ - a <b>subdirectory for each client</b> that runs on the experiment.
+
+
+The subdirectory is created by the system the first time a client runs. The following is an example 
+of the \b /Programs tree from an experiment:
+
+\code
+[local:bnmr:S]/>ls -lt /programs
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Execute on start run            STRING  1     256   18h  0   RWD  /home/bnmr/online/bnmr/bin/at_start_run.csh
+Execute on stop run             STRING  1     256   18h  0   RWD  /home/bnmr/online/bnmr/bin/at_end_run.csh
+ODBEdit                         DIR
+Logger                          DIR
+Epics                           DIR
+rf_config                       DIR
+mheader                         DIR
+Mdarc                           DIR
+autorun                         DIR
+feBNMR                          DIR
+camplog                         DIR
+Lcrplot                         DIR
+mhttpd                          DIR
+mdump                           DIR
+Speaker                         DIR
+mdarc_cleanup                   DIR
+@endcode
+
+
+@subsection RC_ODB_programs_client The ODB /Programs/\<client\> subtree
+ 
+The subdirectory for each client contains system information as well as task-specific characteristics, 
+such as the watchdog timeout, optionally a command to restart the task,  the optional 
+@ref RC_Alarm_System "alarm condition" etc.
+The following example shows the subdirectory for the @ref F_mlogger_utility "mlogger" client:
+
+\code
+[local:bnmr:S]/>ls -lt /programs/logger
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Required                        BOOL    1     4     4h   0   RWD  y
+Watchdog timeout                INT     1     4     4h   0   RWD  10000
+Check interval                  DWORD   1     4     4h   0   RWD  180000
+Start command                   STRING  1     256   4h   0   RWD  mlogger -D
+Auto start                      BOOL    1     4     4h   0   RWD  n
+Auto stop                       BOOL    1     4     4h   0   RWD  n
+Auto restart                    BOOL    1     4     4h   0   RWD  y
+Alarm class                     STRING  1     32    4h   0   RWD  Caution
+First failed                    DWORD   1     4     4h   0   RWD  1259294464
+@endcode
+
+The fields of the /Programs tree are explained below.
+
+
+@subsection RC_customize_Programs_tree Customize the ODB /Programs tree
+
+The parameters of each client in the <b>/Programs</b> tree should be customized for the experiment. The
+meaning of the fields is explained below. This may involve adjusting the watchdog timer, turning on
+an alarm if the client dies, starting the client automatically using a supplied start command etc.
+Customizing is done individually for each client. 
+
+The fields  <b>Execute on start run</b> and <b>Execute on stop run</b> 
+may be filled by the user with a command to be executed on the appropriate run 
+transition, for example 
+ - an @ref RC_odbedit_utility "odbedit"  command, to set or clear an odb parameter e.g <br> <b> odb -c 'set  "/Equipment/fifo_acq/client flags/client alarm" 0' </b>
+ - or the <b> name and path of a script</b> as shown in the example above. 
+ 
+<table
+ style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="0">
+  <caption>Above: Meaning of keys in the ODB /Programs tree.
+  </caption>
+<tr>
+<td colspan="5" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Keys in the ODB tree /Programs
+</td>
+</tr>
+<tr>
+<td colspan = "4" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+ODB Key 
+</td>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;"> 
+Explanation
+</td>
+</tr>
+<!--   line    1   programs   -->
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Programs
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+</tr>
+<!--   line    1.1   Execute on start run   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Execute on start run
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Contains optional command or script to be executed on START transition.
+</td>
+</tr>
+<!--   line    1.2   Execute on stop run   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Execute on stop run
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Contains optional command or script to be executed on STOP transition (see  @ref RC_example_script_1 "example")
+</td>
+</tr>
+<!--   line    2    client name  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Logger</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">Name of client. There will
+be a subdirectory created for each client named with the client-name. This example shows the
+subdirectory for the client "Logger".
+</td>
+</tr>
+<!--   line    3  Required   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Required Required</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If set to "y", a run will be prevented from starting if this client is not running.
+Set to "y" for essential clients only. It should be combined with setting 
+@ref RC_programs_Auto_start "Auto start"
+and/or @ref RC_programs_Auto_restart "Auto restart" to "y", 
+and supplying a @ref RC_programs_Start_command "Start command".
+If set to "n", the run will start successfully without this client running.
+<span class="note">Note that this field also changes the display in the </span>
+ @ref RC_mhttpd_utility "mhttpd" @ref  RC_mhttpd_Program_page.
+</td>
+</tr>
+<!--   line   4 watchdog     -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Watchdog_timeout Watchdog timeout</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">INT</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">This value is
+the watchdog timeout set in milliseconds. A watchdog runs automatically checking 
+(every @ref RC_programs_Check_interval "Check interval" ms) whether the client responds. 
+If the client has not been responded for \b Watchdog \b timeout ms, the client will be 
+assumed to have timed out, and it will be killed. The watchdog time for each client should be 
+adjusted as required. For example,
+clients that contact external hardware that is slow to respond should have a longer time set, or
+they may timeout before the operation is complete.  
+</td>
+</tr>
+<!--   line   5 check interval     -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Check_interval Check interval</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">INT</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+This value is the time interval in milliseconds that the Watchdog checks the client to
+see if it is responding. See @ref  RC_programs_Watchdog_timeout "Watchdog timeout" .
+</td>
+</tr>
+<!--   line   6 start cmd     -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Start_command Start Command</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Contains the command used to restart the client. It is required if either
+@ref RC_programs_Auto_start "Auto start", or @ref RC_programs_Auto_restart "Auto restart" is set to "y",
+or the user wishes to start or restart the client using the @ref RC_mhttpd_Program_page "mhttpd restart button").
+If no start command is supplied, the user can restart the client by hand, or by 
+using the (customized) script \anchor start-all  "start_daq.sh" .
+</td>
+</tr>
+<!--   line   7 auto start   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Auto_start
+\anchor idx_Auto_client_start
+Auto start</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If set to "y" the client will be started automatically using the 
+@ref RC_programs_Start_command "Start Command". This will occur when an experiment is first
+started after killing all clients. If the client then dies (or times out - see 
+@ref RC_programs_Watchdog_timeout "Watchdog time out") the client will \b not be restarted
+unless @ref RC_programs_Auto_restart "Auto restart" is set to "y". 
+</td>
+</tr>
+<!--   line   8 auto stop   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Auto_stop
+\anchor idx_Auto_client_stop
+Auto stop</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If this is set to "y" ... 
+</td>
+</tr>
+<!--   line   7 auto restart   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Auto_restart
+\anchor idx_Auto_client_restart
+Auto restart</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If set to "y" the client will be restarted automatically using the 
+@ref RC_programs_Start_command "Start Command". This will occur if the client dies 
+or times out (see @ref RC_programs_Watchdog_timeout "Watchdog time out"). If set to "n",
+the client must be restarted by the user 
+(see @ref RC_programs_Start_command "Start command").
+See also @ref RC_programs_Auto_start "Auto start".
+</td>
+</tr>
+<!--   line   8 alarm class   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_Alarm_class Alarm class</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If this field is set to one of the existing @ref RC_alarm_classes "alarm classes", an entry
+in the <b>/Alarms/alarms</b> tree will be automatically created for this program. The @ref RC_alarm_type "Alarm Type"
+will be \em Program \em Alarm . This will cause an alarm 
+to go off if the program is not running (provided both the @ref RC_alarm_system_active "alarm system" and the 
+@ref RC_active "individual alarm" are enabled). 
+</td>
+</tr>
+<!--   line   9 first failed   -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_programs_First_failed First_failed</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DWORD</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Value filled by the System to indicate when client first failed.
+</td>
+</tr>
+
+</table>
+
+
+<br>
+
+\anchor idx_alarm_system
+<hr> @section RC_Alarm_System MIDAS Alarm System
+
+
+MIDAS provides an alarm system, which by default is turned off. When the alarm system is 
+@ref  RC_alarm_system_active  "activated" 
+and an alarm condition is detected, alarms messages are sent by the system which appear
+as an  @ref RC_mhttpd_alarm_banner "alarm banner" on the @ref RC_mhttpd_utility "mhttpd" main status page, 
+and as a @ref RC_odb_alarm_msg "message" on any windows running @ref RC_odbedit_utility "odbedit" clients.
+The alarm system is flexible and can be extensively customized for each experiment. 
+
+
+The MIDAS alarm system is built-in and part of the main experiment scheduler.
+This means no separate task is necessary to benefit from the alarm system. 
+<span class="note">The Alarm feature is active during \b ONLINE  mode \b ONLY. </span> 
+Alarm setup and activation is done through the Online DataBase (ODB).
+The alarm system includes several other features such as sequencing and control of the
+experiment.
+The alarm capabilities are:
+- Alarm setting on any ODB variable against a threshold parameter.
+- Alarm triggered by @ref RC_evaluated_alarm_condition "evaluated condition"
+- Selection of Alarm check frequency
+- Selection of Alarm trigger frequency
+- Customizable alarm scheme; under this scheme multiple choices of alarm type
+  can be selected.
+- Selection of alarm message destination ( to system message log or to elog)
+- @ref RC_alarms_email "email or SMS alerts" can be sent
+- Program control on run transition.
+
+The alarm system can be customized through @ref RC_odbedit_utility "ODBEdit" or the  
+@ref RC_mhttpd_ODB_page "mhttpd Alarm page".  
+Some of the features (such as colour) are applicable only to  <span class="utility">mhttpd</span>.
+
+The following sections describe how to use the MIDAS Alarm System.
+
+See also @ref RC_ODB_Alarm_system_implementation
+
+
+\anchor idx_alarm_classes
+\anchor idx_alarm_type
+\anchor idx_ODB_tree_Alarms
+\anchor  RC_alarm_classes
+\anchor  RC_alarm_type
+<hr> @subsection RC_ODB_Alarms_Tree ODB /Alarms Tree
+
+The <b> ODB /Alarms tree </b> contains user and system information related to alarms.
+When the ODB is created, 
+ - two \b Classes of alarm are created : \b Alarm and \b Warning 
+ - two \b Alarms are created: \b Demo \b ODB and \b Demo \b Periodic 
+ - by default, the <b>alarm system is NOT active</b>
+
+Currently, the overall alarm is checked once every minute. Once the alarm has been
+triggered, the message associated with the alarm can be repeated at a different rate.
+The \b Alarms structure is split into 2 sections:
+ - \b "Alarms"  which define the condition to be tested. The user can create as many Alarms as desired, but each must be one of the four defined  @ref RC_alarm_types "Alarm Types" .
+ - \b "Classes"  which define the action to be taken when the alarm occurs. Two Classes (Alarm and Warning) are defined by default. The user can add more Classes as desired.
+
+@anchor RC_alarm_types
+The four available Alarm Types are shown in the following table. They are defined in midas.h.
+<br><table
+ style="text-align: left; width: 50%;" border="1" cellpadding="2"
+cellspacing="0">
+  <caption>Above: Defined Alarm Types.
+  </caption>
+<tr>
+<td colspan="2" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold;
+ text-align: center;">
+Alarm Type
+</td>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold;
+ text-align: center;">INT value</td>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold;
+ text-align: center;">
+Explanation
+</td>
+</tr>
+<!--   line    1   internal   -->
+<tr>
+<td style="vertical-align: top; font-weight: bold; text-align: left;">
+Internal alarms
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">AT_INTERNAL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">1</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+ Trigger on internal (program) alarm setting through the use
+of the <em>al_...()</em>  functions.
+</td>
+</tr>
+<!--   line    2   program   -->
+<tr>
+<td style="vertical-align: top; font-weight: bold; text-align: left;">
+Program alarms
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">AT_PROGRAM</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">2</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Triggered on condition of the state of the defined task.
+</td>
+</tr>
+<!--   line    3   eval   -->
+<tr>
+<td style="vertical-align: top; font-weight: bold; text-align: left;">
+Evaluated
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">AT_EVALUATED</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">3</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Triggered by ODB value on given arithmetical condition.   
+</td>
+</tr>
+<!--   line    4   periodic  -->
+<tr>
+<td style="vertical-align: top; font-weight: bold; text-align: left;">
+Periodic alarms
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">AT_PERIODIC</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">4</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+ Triggered by timeout condition defined in the alarm setting.
+</td>
+</tr>
+</table>
+
+
+In order to make the system flexible, each alarm class may perform different actions
+when an alarm is given. For example, it may write a system message, write to the elog, stop the
+run or spawn a detached script listed in the ODB variable 
+<span class="odb">/Programs/Classes/Execute command</span>.
+This feature is used when an  @ref RC_alarms_email .
+
+@subsubsection RC_evaluated_alarm_condition Evaluated Alarm conditions
+
+The alarm \b condition for evaluated alarms is entered into the ODB key
+<span class="odb">/Alarms/Alarms/\<alarm_name\>/Condition </span>
+where <span class="odb">\<alarm_name\></span> is the name of the alarm.
+See  @ref RC_condition "condition key".
+
+The \b condition may be simply a comparison between any ODB variable
+and a threshold parameter, e.g.
+\code
+ /Runinfo/Run number > 100
+@endcode
+or it may be an evaluated condition. One can write conditions like
+\code
+  /Equipment/HV/Variables/Input[*] < 100
+@endcode
+or 
+\code
+  /Equipment/HV/Variables/Input[2-3] < 100
+@endcode
+to check all values from an array or a certain range. If one array element
+fulfills the alarm condition, the alarm is triggerrd. In addition, bit-wise alarm
+conditions are possible, e.g.
+\code
+  /Equipment/Environment/Variables/Input[0] & 8
+@endcode
+The alarm is triggered if bit #2 is set in Input[0].
+
+
+
+
+
+<hr>
+
+@subsubsection RC_explanation_of_alarms_tree Meaning of the keys in the /Alarms ODB tree
+
+
+<table
+ style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="0">
+  <caption>Above: Meaning of keys in the ODB /Alarms tree.
+  </caption>
+<tr>
+<td colspan="6" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Keys in the ODB tree /Alarms
+</td>
+</tr>
+<tr>
+<td colspan = "5" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+ODB Key 
+</td>
+<td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;"> 
+Explanation
+</td>
+</tr>
+<!--   line    1   Alarms   -->
+<tr>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Alarms
+</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DIR</td>
+
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+</tr>
+<!--   line    2  Alarm system active    -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_alarm_system_active
+Alarm system active</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+ <span class="note">If set to "y"the alarm system is active</span>. Set to "n" to deactivate.
+</td>
+</tr>
+
+<!--   line    3    alarms  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Alarms</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DIR</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Sub-tree defining each individual alarm condition.</td>
+</tr>
+<!--   line    4    demo odb  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Demo odb</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DIR</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Name of one of the defined alarms</td>
+</tr>
+<!--   line    5    active  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_active 
+Active</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If set to "y" , this particular alarm is active.
+</td>
+</tr>
+
+<!--   line    6  triggered -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Triggered</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">INT</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If non-zero, alarm is triggered. Filled by System.
+</td>
+</tr>
+
+
+<!--   line    7  type -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Type</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">INT</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+One of the listed  @ref  RC_alarm_types "Alarm Types"  
+</td>
+</tr>
+
+
+<!--   line    8  Check interval -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Check interval</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">INT</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Frequency in seconds that alarm condition is checked
+</td>
+</tr>
+<!--   line    9  Checked last -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Checked last</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DWORD</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Written by Alarm System
+</td>
+</tr>
+
+<!--   line    10  Time triggered first -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Time triggered first</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Written by Alarm System
+</td>
+</tr>
+<!--   line    11  Time triggered last -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Time triggered last</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Written by Alarm System
+</td>
+</tr>
+
+<!--   line    12 Condition -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+\anchor RC_condition
+Condition</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+@ref RC_evaluated_alarm_condition "Condition" on which alarm should trigger.
+</td>
+</tr>
+
+
+<!--   line    13  Alarm class -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Alarm class</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Set to one of the existing Alarm classes, e.g. Alarm, Warning
+</td>
+</tr>
+<!--   line    14 Alarm message -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Alarm message</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Message to be written when alarm triggers
+</td>
+</tr>
+
+<!--   line    15   classes  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Classes</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DIR</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+ Sub-tree defining each individual action to be performed by a
+  pre-defined and requested alarm.</td>
+</tr>
+
+
+<!--   line    16    warning  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Warning</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DIR</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Name of one of the defined classes</td>
+</tr>
+
+<!--   line    17    write system msg  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Write System Message</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If set to "y" a message will be sent to the System log when alarm is triggered.  
+</td>
+</tr>
+<!--   line    18    write elog msg  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Write Elog Message</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+If set to "y" a message will be written to the Elog when alarm is triggered   
+</td>
+</tr>
+<!--   line    19    System message interval  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+System message interval</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">INT</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Interval in seconds between successive system messages when alarm is triggered
+</td>
+</tr>
+<!--   line    20    System message last  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+System message last</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DWORD</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Filled by System...
+</td>
+</tr>
+<!--   line    21    Execute cmd  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Execute command</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Command to be executed when alarm is triggered.
+</td>
+</tr>
+<!--   line    22    Execute last  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Execute last</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">DWORD</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+<br>  
+</td>
+</tr>
+<!--   line    23    Stop run  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Stop run</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">BOOL</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+<br>  
+</td>
+</tr>
+
+<!--   line    24   Display BGColor -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+ Display BGColor</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Background colour of @ref RC_mhttpd_alarm_banner  "alarm banner" (mhttpd only).
+</td>
+</tr>
+<!--   line    25    Display FGColor  -->
+<tr>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;"><br></td>
+<td style="vertical-align: top; background-color: lightyellow; font-weight: bold; text-align: left;">
+Display FGColor</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">STRING</td>
+<td style="vertical-align: top; font-weight: normal; text-align: left;">
+Foreground colour of @ref RC_mhttpd_alarm_banner  "alarm banner" (mhttpd only). 
+</td>
+</tr>
+</table>
+<br><hr><br>
+
+@subsubsection RC_alarms_tree_example Examples of an /Alarms tree
+
+Part of the <b> /Alarms </b> tree is shown below using @ref RC_odbedit_utility "odbedit" 
+(see also @ref RC_mhttpd_Alarm_page "mhttpd Alarm page").
+
+\code
+[local:pol:S]/>cd /alarms
+[local:pol:S]/Alarms>ls
+Alarm system active             y
+Alarms
+Classes
+@endcode
+
+Some of the types of alarm under the <b> /Alarms/Alarms </b> tree for an experiment are shown below:
+\code
+[local:pol:S]/Alarms>ls -r -lt
+Key name                        Type    #Val  Size  Last Opn Mode Value
+---------------------------------------------------------------------------
+Alarms                          DIR
+    Alarm system active         BOOL    1     4     4h   0   RWD  y
+    Alarms                      DIR
+        Demo ODB                DIR
+            Active              BOOL    1     4     >99d 0   RWD  n
+            Triggered           INT     1     4     >99d 0   RWD  0
+            Type                INT     1     4     >99d 0   RWD  3
+            Check interval      INT     1     4     >99d 0   RWD  60
+            Checked last        DWORD   1     4     >99d 0   RWD  0
+            Time triggered firstSTRING  1     32    >99d 0   RWD
+            Time triggered last STRING  1     32    >99d 0   RWD
+            Condition           STRING  1     256   >99d 0   RWD  /Runinfo/Run number > 100
+            Alarm Class         STRING  1     32    >99d 0   RWD  Alarm
+            Alarm Message       STRING  1     80    >99d 0   RWD  Run number became too large
+        Demo periodic           DIR
+              Active              BOOL    1     4     >99d 0   RWD  n
+            Triggered           INT     1     4     >99d 0   RWD  0
+            Type                INT     1     4     >99d 0   RWD  4
+            Check interval      INT     1     4     >99d 0   RWD  28800
+            Checked last        DWORD   1     4     >99d 0   RWD  1058817867
+            Time triggered firstSTRING  1     32    >99d 0   RWD
+            Time triggered last STRING  1     32    >99d 0   RWD
+            Condition           STRING  1     256   >99d 0   RWD
+            Alarm Class         STRING  1     32    >99d 0   RWD  Warning
+            Alarm Message       STRING  1     80    >99d 0   RWD  Please do your shift checks
+        fePOL                   DIR
+            Active              BOOL    1     4     19s  0   RWD  y
+            Triggered           INT     1     4     19s  0   RWD  205
+            Type                INT     1     4     3s   0   RWD  2
+            Check interval      INT     1     4     19s  0   RWD  60
+            Checked last        DWORD   1     4     19s  0   RWD  1259196026
+            Time triggered firstSTRING  1     32    19s  0   RWD  Wed Nov 25 12:59:33 2009
+            Time triggered last STRING  1     32    19s  0   RWD  Wed Nov 25 16:40:26 2009
+            Condition           STRING  1     256   3s   0   RWD  Program not running
+            Alarm Class         STRING  1     32    19s  0   RWD  Caution
+            Alarm Message       STRING  1     80    19s  0   RWD  Program fePOL is not running
+        thr2 trip               DIR
+            Active              BOOL    1     4     3s   0   RWD  y
+            Triggered           INT     1     4     3s   0   RWD  0
+            Type                INT     1     4     3s   0   RWD  3
+            Check interval      INT     1     4     3s   0   RWD  15
+            Checked last        DWORD   1     4     3s   0   RWD  1259196042
+            Time triggered firstSTRING  1     32    3s   0   RWD
+            Time triggered last STRING  1     32    3s   0   RWD
+            Condition           STRING  1     256   3s   0   RWD  /Equipment/Info ODB/Variables/last failed thr test = 2
+            Alarm Class         STRING  1     32    3s   0   RWD  Threshold
+            Alarm Message       STRING  1     80    3s   0   RWD  Laser threshold check failed
+
+@endcode
+
+In the above example,
+ - <b>Demo odb</b> and <b>Demo periodic</b> were created when the ODB was created. 
+ - The alarm \b Fepol was added automatically when the user filled the @ref RC_programs_Alarm_class  "alarm class" field in the <b>/Programs/fepol</b> sub-tree. 
+ - The other alarm \b thr2_trip was added by the user.
+<br> 
+
+Four Classes of alarms (Alarm, Caution, Warning and Threshold) are defined under the /Alarms/Classes tree for this 
+experiment. Alarm and Warning were created when the ODB was created. 
+The user added two more classes, Caution and Threshold, by @ref RC_odbedit_copy "copying" and @ref RC_odbedit_set "editing" one of the existing classes.
+The Classes defined for the experiment are shown below:
+
+\code
+   Classes                      DIR
+        Alarm                   DIR
+            Write system messageBOOL    1     4     27h  0   RWD  y
+            Write Elog message  BOOL    1     4     27h  0   RWD  n
+            System message interINT     1     4     27h  0   RWD  60
+            System message last DWORD   1     4     27h  0   RWD  0
+            Execute command     STRING  1     256   27h  0   RWD
+            Execute interval    INT     1     4     27h  0   RWD  0
+            Execute last        DWORD   1     4     27h  0   RWD  0
+            Stop run            BOOL    1     4     27h  0   RWD  n
+            Display BGColor     STRING  1     32    27h  0   RWD  red
+            Display FGColor     STRING  1     32    27h  0   RWD  black
+        Warning                 DIR
+            Write system messageBOOL    1     4     >99d 0   RWD  y
+            Write Elog message  BOOL    1     4     >99d 0   RWD  n
+            System message interINT     1     4     >99d 0   RWD  60
+            System message last DWORD   1     4     >99d 0   RWD  0
+            Execute command     STRING  1     256   >99d 0   RWD
+            Execute interval    INT     1     4     >99d 0   RWD  0
+            Execute last        DWORD   1     4     >99d 0   RWD  0
+            Stop run            BOOL    1     4     >99d 0   RWD  n
+            Display BGColor     STRING  1     32    >99d 0   RWD  red
+            Display FGColor     STRING  1     32    >99d 0   RWD  black
+      Caution                 DIR
+            Write system messageBOOL    1     4     19s  0   RWD  y
+            Write Elog message  BOOL    1     4     19s  0   RWD  n
+            System message interINT     1     4     19s  0   RWD  60
+            System message last DWORD   1     4     19s  0   RWD  1259196026
+            Execute command     STRING  1     256   19s  0   RWD
+            Execute interval    INT     1     4     19s  0   RWD  0
+            Execute last        DWORD   1     4     19s  0   RWD  0
+            Stop run            BOOL    1     4     19s  0   RWD  y
+            Display BGColor     STRING  1     32    19s  0   RWD  blue
+            Display FGColor     STRING  1     32    19s  0   RWD  red
+       Threshold               DIR
+            Write system messageBOOL    1     4     >99d 0   RWD  n
+            Write Elog message  BOOL    1     4     >99d 0   RWD  n
+            System message interINT     1     4     >99d 0   RWD  60
+            System message last DWORD   1     4     >99d 0   RWD  0
+            Execute command     STRING  1     256   >99d 0   RWD
+            Execute interval    INT     1     4     >99d 0   RWD  0
+            Execute last        DWORD   1     4     >99d 0   RWD  0
+            Stop run            BOOL    1     4     >99d 0   RWD  n
+            Display BGColor     STRING  1     32    >99d 0   RWD  yellow
+            Display FGColor     STRING  1     32    >99d 0   RWD  black
+
+@endcode
+
+
+<br><hr><br>
+
+@section RC_alarms_email Alarm triggers Email or SMS alerts 
+
+It is also possible to have the MIDAS alarm system send  
+email or SMS alerts to cell phones when alarms are 
+triggered. This can be configured by defining an ODB alarm on 
+a critical ODB parameter, e.g.
+\code
+/Alarms/Alarms/Liquid Level
+Active	                 y
+Triggered	         0 (0x0)
+Type	                 3 (0x3)
+Check interval	        60 (0x3C)
+Checked last	1227690148 (0x492D10A4)
+Time triggered first	(empty)
+Time triggered last	(empty)
+Condition	        /Equipment/Environment/Variables/Input[0] < 10
+Alarm Class	        Level Alarm
+Alarm Message	        Liquid Level is only %s
+@endcode
+In this example, the alarm triggers an alarm of class 
+"Level Alarm". This alarm class is defined as follows:
+\code
+/Alarms/Classes/Level Alarm
+Write system message	y
+Write Elog message	n
+System message interval	600 (0x258)
+System message last	0 (0x0)
+Execute command	        /home/midas/level_alarm '%s'
+Execute interval	1800 (0x708)
+Execute last	        0 (0x0)
+Stop run	        n
+Display BGColor	        red
+Display FGColor	        black
+@endcode
+The key here is to call a script "level_alarm", which can send emails. Use 
+something like:
+\code
+#/bin/csh
+echo $1 | mail -s \"Level Alarm\" your.name@domain.edu
+odbedit -c 'msg 2 level_alarm \"Alarm was sent to your.name@domain.edu\"'
+@endcode
+The second command just generates a MIDAS system message for confirmation. Most 
+cell phones (depends on the provider) have an email address. If you send an email 
+there, it will be translated into a SMS message.
+
+The script file above can of course be more complicated. A perl script could be
+used that parses an address list, so other interested parties can register by 
+adding his/her email address to that list. The script may also collects some other 
+slow control variables (like pressure, temperature) and combine them into the SMS message.
+
+For very sensitive systems, having an alarm via SMS may not be sufficient, since the 
+alarm system could be down (e.g. computer crash, network failure). In this case 
+'negative alarms' can be used. For example, every 30 minutes the system may send 
+an SMS with the current parameter values. If the expected message is not received, it may
+indicate that something in the MIDAS system is wrong.
+
+
+
+
+@section RC_ODB_Alarm_system_implementation Implementation of the MIDAS Alarm System
+
+
+Alarms are checked inside alarm.c::al_check(). This function is called by
+cm_yield() every 10 seconds and by rpc_server_thread(), also every 10 seconds.
+For remote MIDAS clients, their al_check() issues an RPC_AL_CHECK RPC call into
+the  MIDAS server utility @ref RC_mserver_utility "mserver", where rpc_server_dispatch() calls the local al_check().
+As result, all alarm checks run inside a process directly attached to the local
+MIDAS shared memory (inside a local client or inside an <span class="utility">mserver</span> process for a
+remote client).
+Each and every MIDAS client runs the alarm checks. To prevent race conditions
+between different MIDAS clients, access to al_check() is serialized using the
+ALARM semaphore.
+Inside al_check(), alarms are triggered using al_trigger_alarm(), which in turn
+calls al_trigger_class(). Inside al_trigger_class(), the alarm is recorded into
+an elog or into midas.log using cm_msg(MTALK).
+
+Special note should be made of the ODB setting "/Alarm/Classes/xxx/System
+message interval", which has a surprising effect - after an alarm is recorded
+into system messages (using cm_msg(MTALK)), no record is made of any subsequent
+alarms until the time interval set by this variable elapses. With default value
+of 60 seconds, after one alarm, no more alarms are recorded for 60 seconds.
+Also, because all the alarms are checked at the same time, only the first
+triggered alarm will be recorded.
+
+<span class="new">As of alarm.c rev 4683, </span> "System message interval" is set to 0 ensures that every
+alarm is recorded into the MIDAS log file. (In previous revisions, this setting
+may still miss some alarms).
+
+There are 3 types of alarms:
+
+1) "program not running" alarms.
+
+These alarms are enabled in ODB by setting <span class="odb">/Programs/ppp/Alarm class</span>. Each
+time al_check() runs, every program listed in <span class="odb">/Programs</span> is tested using
+"cm_exist()" and if the program is not running, the time of first failure is
+remembered in <span class="odb">/Programs/ppp/First failed</span>.
+
+If the program has not been running for longer than the time set in ODB key
+<span class="odb">/Programs/ppp/Check interval</span>, an alarm is triggered (if enabled by
+<span class="odb">/Programs/ppp/Alarm class</span> and the program is restarted (if enabled by
+<span class="odb">/Programs/ppp/Auto restart</span>).
+
+The "not running" condition is tested every 10 seconds (each time al_check() is
+called), but the frequency of "program not running" alarms can be reduced by
+increasing the value of <span class="odb">/Alarms/Alarms/ppp/Check interval</span> (default value 60
+seconds). This can be useful if <span class="odb">System message interval</span> is set to zero.
+
+2) "evaluated" alarms
+
+3) "periodic" alarms
+
+There is nothing surprising in these alarms. Each alarm is checked with a time
+period set by  <span class="odb">/Alarm/xxx/Check interval</span>. The value of an evaluated alarm is
+computed using al_evaluate_condition().
+
+
+
+
+
+
+
+\htmlonly
+<script type="text/javascript">
+pages("RC_Monitor" ,"RunControl", "RC_Hot_Link", "RC_customize_ODB","" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+\anchor end
+*/ <!-- End of page RC_customize_ODB Customizing the Experiment for Run Control  -->
+
+
+<!-- ============================ H O T   L I N K S ========================== -->
+/*! @page  RC_Hot_Link Event Notification (Hot-Link)
+
+<br>
+\htmlonly
+<script type="text/javascript">
+pages("RC_customize_ODB", "RunControl","FrontendOperation", "RC_Hot_Link", "end" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+<br>
+\anchor idx_hotlink
+\anchor idx_event_notification-see-hotlink
+@section RC_Hot_Link_Intro Introduction
+MIDAS implements event notification through <b> "hot-links" </b>. Once a hot-link is established to
+a key in the ODB, \b immediately that key is accessed, a call-back routine associated with
+the hot-link is called to perform whatever action has been programmed. The MIDAS system uses hot-links
+to update keys in the ODB for communication between system clients 
+(e.g.  @ref F_Frontend_History_Event "history system").
+ 
+Users often use hot-links to immediately set some hardware to a new value. The new value may have been input into 
+the ODB, either by the user or another client. Without a hot-link, the program setting the hardware values 
+would have to continually poll the ODB 
+to see if any values had changed; otherwise the new value would not be transmitted to the 
+hardware until the next time the ODB set values were read and applied (for example, at the beginning
+of a run). 
+<br>
+
+<hr> 
+
+@section RC_Example_Hot_Link How to set up a Hot-Link
+It is often desirable to modify hardware parameters (such as discriminator
+levels or trigger logic) connected to the frontend computer.
+Assuming that the required hardware is accessible from the frontend code,
+these parameters are easily controllable when a hot-link
+is established between the frontend and the ODB itself.
+
+ * <center>
+ *  Hot-Link process
+ * \image html hotlink.gif 
+ * </center> 
+
+First the parameters have to be defined in the ODB under the Settings tree
+for the given equipment. Let's assume we have two discriminator levels
+belonging to the trigger electronics, which should be controllable.
+The following commands define these levels in the ODB:
+\code
+[local]/>cd /Equipment/Trigger/
+[local]Trigger>create key Settings
+[local]Trigger>cd Settings
+[local]Settings>create int level1
+[local]Settings>create int level2
+[local]Settings>ls
+@endcode 
+
+\anchor idx_experim-dot-h
+@anchor RC_experim_dot_h
+The frontend can now map a C structure to these settings.
+In order to simplify this process,  @ref RC_odbedit "ODBEdit" can be requested to generate a
+header file containing this C structure. 
+The  odbedit command @ref RC_odbedit_make "make" generates in the current directory
+the header file \b experim.h .
+<br>
+This file can be copied to the frontend directory (if necessary) and included in the frontend
+source code. It contains a section with a C structure of the trigger settings
+and an ASCII representation:
+\code 
+typedef struct {
+  INT       level1;
+  INT       level2;
+  TRIGGER_SETTINGS;
+
+#define TRIGGER_SETTINGS_STR(_name) char *_name[] = {\
+"[.]",\
+"level1 = INT : 0",\
+"level2 = INT : 0",\
+
+"",\
+NULL  
+@endcode  
+
+This definition can be used to define a C structure containing the parameters in
+frontend.c:
+\code 
+#include <experim.h>
+
+TRIGGER_SETTINGS trigger_settings;
+@endcode  
+
+A hot-link between the ODB values and the C structure is established in the
+frontend_init() routine:
+\code 
+INT frontend_init()
+{HNDLE hDB, hkey;
+TRIGGER_SETTINGS_STR(trigger_settings_str);
+
+  cm_get_experiment_database(&hDB, NULL);
+
+  db_create_record(hDB, 0,
+    "/Equipment/Trigger/Settings",
+    strcomb(trigger_settings_str));
+
+  db_find_key(hDB, 0, "/Equipment/Trigger/Settings", &hkey);
+
+  if (db_open_record(hDB, hkey,
+      &trigger_settings,
+      sizeof(trigger_settings), MODE_READ,
+      trigger_update, NULL) != DB_SUCCESS)
+    {
+    cm_msg(MERROR, "frontend_init",
+      "Cannot open Trigger Settings in ODB");
+    return -1;
+     
+  return SUCCESS;
+@endcode   
+
+The db_create_record() function re-creates the settings sub-tree in the ODB from
+the ASCII representation in case it has been corrupted or deleted.
+The db_open_record() now establishes the hot-link between the settings in the ODB
+and the trigger_settings structure.
+Each time the ODB settings are modified, the changes are written to the
+trigger_settings structure and the callback routine trigger_update()
+is executed afterwards. This routine has the task to set the hardware
+according to the settings in the trigger_settings structure.
+
+It may look like:
+\code 
+void trigger_update(INT hDB, INT hkey)
+{
+  printf("New levels: %d %d",
+    trigger_settings.level1,
+    trigger_settings.level2);
+ 
+@endcode  
+
+Of course the printf() function should be replaced by a function which accesses
+
+the hardware properly. Modifying the trigger values with ODBEdit can test the
+whole scheme:
+\code 
+[local]/>cd /Equipment/Trigger/Settings
+[local]Settings>set level1 123
+[local]Settings>set level2 456
+@endcode  
+Immediately after each modification the frontend should display the new values.
+The settings can be saved to a file and loaded back later:
+\code 
+[local]/>cd /Equipment/Trigger/Settings
+[local]Settings>save settings.odb
+[local]Settings>set level1 789
+[local]Settings>load settings.odb
+@endcode  
+The settings can also be modified from any application just by accessing the ODB.
+Following listing is a complete user application that modifies the trigger level:
+\code 
+#include <midas.h>
+
+main()
+{
+HNDLE hDB;
+INT   level;
+  cm_connect_experiment("", "Sample", "Test",
+                        NULL);
+  cm_get_experiment_database(&hDB, NULL);
+
+  level = 321;
+  db_set_value(hDB, 0,
+    "/Equipment/Trigger/Settings/Level1",
+    &level, sizeof(INT), 1, TID_INT);
+
+  cm_disconnect_experiment();
+ 
+@endcode  
+The following figure summarizes the involved components:
+
+To make sure a hot-link exists, one can use the @ref RC_odbedit "odbedit" command @ref RC_odbedit_sor :
+\code [local]Settings>cd /
+[local]/>sor
+/Equipment/Trigger/Settings open 1 times by ...
+
+@endcode  
+
+
+<br>
+\anchor end
+
+\htmlonly
+<script type="text/javascript">
+pages("RC_customize_ODB" , "RunControl","FrontendOperation", "RC_Hot_Link", "" ); // back index next {top bottom}
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+ <!-- end of page  RC_Hot_Link Event Notification (Hot-Link)
+*/
+
+

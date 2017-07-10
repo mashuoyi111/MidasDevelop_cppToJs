@@ -1,0 +1,26 @@
+/*! @page SpecialConfig SECTION 9: Special Configurations
+
+<!-- Navigation -->
+<br>
+\htmlonly
+<script type="text/javascript">
+pages("Performance","SpecConfig",  "BuildingOptions","SpecConfig","end" ); // back index next {top bottom}
+sections("DataAnalyzer","SpecialConfig","BuildingOptions"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+<br>
+<!-- End of Navigation -->
+
+
+no contents yet
+
+
+
+
+<br>
+
+
+
+\anchor end
+*/

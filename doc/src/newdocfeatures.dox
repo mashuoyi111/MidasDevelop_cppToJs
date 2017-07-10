@@ -1,0 +1,127 @@
+/*! \page NDF SECTION 11 New Features
+
+<br>
+\htmlonly
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "BuildingOptions","NDF", "FAQ", "NDF", "end" );
+sections("BuildingOptions","NDF","FAQ"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+
+\section ndf_info  General Information
+
+This section will describe what <b>new features</b> are available with new versions
+of the MIDAS code. References will be given to these features in the documentation, and they
+will be highlighted in the text <span class ="new">like this</span>.
+Also included will be any other relevent changes, such as "old features" that were standard, but have since
+become obsolescent. These may have been made optional or removed.   
+
+See also the <a href="https://ladd00.triumf.ca/elog/Midas">Midas Elog Forum</a> for
+  - Requests for new features, 
+  - Bug reports etc https://ladd00.triumf.ca/elog/Midas
+  - yet-to-be-documented new features
+
+\subsection NDF_versions Note on MIDAS Versions
+
+Historically, the MIDAS package was released with an overall version (e.g. 1.9.5, 2.2.0 etc). This had the disadvantage that
+many new features were not available until the release of the next version.
+
+<br>
+The package release system has been discontinued. The latest version of the MIDAS package is now
+available from the  <a href="https://savannah.psi.ch/viewvc/meg_midas/trunk/" > online SVN 
+</a> repository. As a changes are made to the files in the MIDAS package, a common version number is incremented. Each file has an
+individual version number, but updates of a particular file in svn will not necessarily have consecutive version numbers.
+For example, the next version of mhttpd.c after 4708 is 4722. The missing version numbers have been used to update different
+files in the package. Checking out the MIDAS package on a particular day will get the latest working version of the MIDAS package
+with all the new features.
+<br>
+In this documentation, new features will be dated (month/year) after which an update from svn will include the new feature.
+The version of the file (and therefore of the MIDAS package) that included the new feature is listed  @ref ndf_New_Features "below".
+Features will be considered to be "new" for a year or so, then will become standard, and no longer be listed is this file, 
+
+
+\section ndf_New_Features New Documented Features
+
+\subsection ndf_aug_2011 Aug 2011
+ - Display disk level on status page (mhttpd.c 5120)
+
+
+\subsection ndf_jun_2011 Jun 2011
+ - Midas Sequencer implemented  (mhttpd.c 5071)
+     - starts/stops runs, changes ODB values, loops, waits for various events etc.
+
+ - Javascript ODB interface revisions
+     - addition of ODBMGet, ODBGetRecord etc. (mhttpd.c 5075)
+
+
+\subsection ndf_feb_2011 Feb 2011
+ - addition of ODBRpc_rev1 to return data to the web page  (mhttpd.c 4994)
+ - addition of /Experiment subdirectory "status items" to allow user to display parameters on the main status page  (mhttpd.c 4898)
+
+\subsection ndf_nov_2010 Nov 2010
+ - Javascript ODB interface  addition of ODBGenerateMsg  (mhttpd.c 4876)
+
+\anchor idx_YBOS
+\subsection ndf_sep_2010 Sep 2010
+ - Removal of the YBOS support, ybos files replaced by mdsupport.
+
+\subsection ndf_may_2010 May 2010
+ - bit operations for custom fills - see @ref RC_mhttpd_fills_src_logical  (mhttpd.c 4708)
+ - Arrays can now be written with  @ref RC_mhttpd_custom_odbset   (mhttpd.c 4707)
+
+\subsection ndf_jan_2010 Jan 2010
+ - Four different rows for the various buttons on the @ref alias_buttons_status_page "Status page"
+
+\subsection ndf_dec_2009 Dec 2009
+ - Implemented MSCB Page (mhttpd.c 4659) replacing the old CNAF page
+ - Option to customize the  @ref RC_mhttpd_status_menu_buttons "menu buttons" appearing on the main status page (mhttpd.c 4646)
+ - Removed 'analyzed' column (Main Status page)  (mhttpd.c 4644)
+ - Changed Alias and Custom links to Buttons - see @ref alias_buttons_status_page "example" (mhttpd.c 4633)
+
+  
+Since the column on the main MIDAS status page with fraction of analyzed events was
+barely used, it has been dropped. It did not make sense for all slow 
+control events. In case this feature is required in some experiment, it will be moved  
+into a custom page and the ratio calculated in JavaScript, where there is much more 
+flexibility.
+
+This modification frees up more space on the status page for the "Status" column, where 
+front-end programs can report errors etc.
+ 
+\subsection ndf_nov_2009 Nov 2009
+ - Direct serving of GIF images from file system in custom pages (mhttpd.c 4631)
+ - Option to hide the run start/stop buttons  ( see  @ref RC_customize_mhttpd_run_buttons "details" );
+ - experiment name now shown in status page title and elog email (mhttpd.c 4629)
+
+\subsection ndf_sep_2009 Sep 2009
+ - implemented @ref  F_Logger_Run_Duration "run duration" (mlogger.c 4561)
+ 
+\subsection ndf_jun_2009 Jun 2009  
+ - shows Run start/stop requested on main status page until mtransition starts - see @ref  RC_mhttpd_Start_page (mhttpd.c 4520)
+
+\subsection ndf_jan_2009 Jan 2009 
+    
+ - Improvements to the History system (mlogger.c,  mhttpd.c 4435)<br> \b Note: backup ODB before using the following: 
+      - history in SQL database (see @ref F_History_sql_internal)
+          - see  @ref  F_new_history_tags "Note on /History/Tags"
+      - experimental implementation of "ODBRpc" @ref RC_mhttpd_custom_RPC_access  added to the MIDAS javascript library
+
+\subsection ndf_feb_2008 Feb 2008
+
+ -  @ref RC_mhttpd_proxy
+ 
+<br>
+\anchor end
+\htmlonly
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "BuildingOptions","NDF", "FAQ", "NDF", "" );
+sections("BuildingOptions","NDF","FAQ"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+*/

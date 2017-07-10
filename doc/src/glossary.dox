@@ -1,0 +1,46 @@
+/*! @page Glossary Glossary
+
+
+<br>
+\htmlonly
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "NDF", "Glossary", "Convention", "Glossary", "end" );
+sections("NDF","Glossary","Convention"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+<span class="warn">
+WARNING - this page is under construction
+</span>
+
+<ul>
+<li> @ref idx_backend "backend"
+<li> @ref idx_device-driver "driver"
+<li> @ref Equipment_definition "equipment"
+  <ul>
+     <li> @ref FE_hw_equipment "hardware"
+     <li> @ref FE_sw_equipment "software"
+  </ul>
+<li> @ref Event_definition
+  <ul>
+     <li> @ref  FE_event_trigger "trigger"
+  </ul>
+<li> @ref idx_frontend "frontend"
+  
+</ul>
+
+\anchor end
+<br>
+\htmlonly
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "NDF", "Glossary", "Convention", "Glossary", "" );
+sections("NDF","Glossary","Convention"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<br>
+
+*/
+    

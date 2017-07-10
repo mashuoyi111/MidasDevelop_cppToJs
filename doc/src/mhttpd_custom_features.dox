@@ -1,0 +1,670 @@
+/*!\page  RC_mhttpd_custom_js_lib JavaScript built-in library mhttpd.js
+<!--  
+     subpage of mhttpd_custom.dox  
+-->
+
+\htmlonly 
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "RC_mhttpd_Activate", "RunControl","RC_mhttpd_custom_ODB_access", "RC_mhttpd_custom_js_lib", "end" );
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+
+\anchor idx_JavaScript_built-in-library
+\anchor idx_mhttpd-javascript-library
+
+
+Many of the supported features of MIDAS Custom web pages are available under HTML, but others rely on the 
+<span class="note">inclusion of the mhttpd JavaScript (JS) library </span>. This JS library relies on
+certain new commands which are built into <span class="utility">mhttpd</span>, and is 
+therefore hardcoded into  mhttpd.c . 
+
+<span class="note">The JS library can be viewed by entering in your browser location box:</span>
+@code
+http://<mhttpd host>/mhttpd.js
+@endcode
+
+i.e. if running <span class="utility">mhttpd</span> on \b host  "midaspc" on \b port 8081, you would enter :
+@code
+http://midaspc:8081/mhttpd.js
+@endcode
+to view the JS library. Alternatively, a recent version is shown here:
+  - \subpage RC_mhttpd_js Javascript Built-in Library code : mhttpd.js
+
+<br><hr>
+@section RC_mhttpd_js_library_features List of functions in JS library
+
+Use of the following functions in custom webpages requires the JS library to be included:
+
+<table
+ style="text-align: left; width: 60%;" border="0" cellpadding="2"
+cellspacing="0">
+<tr>
+<td> @ref RC_mhttpd_custom_odbget "ODBGet" </td> <td>  <span class ="new">Modified  @ref  ndf_jun_2011</span> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_odbmget "ODBMGet"  </td> <td>   <span class ="new">New since  @ref  ndf_jun_2011</span> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_odbgetrecord "ODBGetRecord" </td> <td>    <span class ="new">New since  @ref  ndf_jun_2011 </span> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_odbextractrecord "ODBExtractRecord" </td> <td>    <span class ="new">New since @ref ndf_jun_2011 </span> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_odbset "ODBSet" </td> <td> <br> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_odbedit "ODBEdit" </td> <td>  <br> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_odbkey "ODBKey" </td> <td>  <br> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_getmsg "ODBGetMsg" </td> <td>  <br> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_generatemsg "ODBGenerateMsg"  </td> <td>   <span class ="new">New since  @ref ndf_nov_2010 </span> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_getmouse "getMouseXY" </td> <td>  <br> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_RPC_access "ODBRpc_rev0" </td> <td>  <br> </td>
+</tr><tr>
+<td> @ref RC_mhttpd_custom_RPC_access "ODBRpc_rev1" </td> <td>  <span class ="new">New since @ref ndf_feb_2011 </span> </td>
+</tr></table>
+
+ <hr> 
+@section  RC_mhttpd_include_js_library Include the JS library mhttpd.js in a custom page
+In order to use any of the <b> JavaScript built-in functions</b>, 
+<span class="note">you must 
+include the  @ref RC_mhttpd_custom_js_lib "library" in your custom page</span> 
+by putting the following statement inside the <span class="htmltag">\<head\>...\</head\></span> tags of an HTML file:
+
+@code
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 TRANSITIONAL//EN">
+<html><head>
+<title> ODBEdit test</title>
+<script type="text/javascript" src="../mhttpd.js"></script>
+...
+</head>
+...
+</html>
+@endcode
+
+
+<br>
+\anchor end
+
+\htmlonly 
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "RC_mhttpd_Activate", "RunControl","RC_mhttpd_custom_features", "RC_mhttpd_custom_js_lib", "" );
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly
+<hr>
+
+<!--- end of page  RC_mhttpd_custom_js_lib -->
+*/
+
+
+/*!\page RC_mhttpd_custom_features Features available on custom pages
+<!--  
+     subpage of mhttpd_custom.dox  
+-->
+<br>
+\htmlonly 
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "RC_mhttpd_custom_js_lib", "RunControl","RC_mhttpd_custom_ODB_access", "RC_mhttpd_custom_features", "end" );
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly 
+
+\anchor mhttpd_page_custom_create
+@section RC_mhttpd_custom_create How to create a custom page
+
+A custom page may be written in ordinary HTML code and/or JavaScript. It may include any of
+the  following special features provided for use with MIDAS: 
+
+\anchor idx_mhttpd_page_custom_features
+
+ - @ref RC_mhttpd_custom_midas_buttons
+ - @ref RC_mhttpd_custom_ODB_access
+ - @ref RC_mhttpd_custom_pw_protection
+ - @ref RC_mhttpd_custom_script_buttons
+ - @ref RC_mhttpd_custom_refresh
+ - @ref RC_mhttpd_custom_alias
+ - @ref RC_mhttpd_custom_getmsg
+ - @ref RC_mhttpd_custom_checkboxes
+ - @ref RC_mhttpd_js_update_part
+ - @ref RC_mhttpd_custom_RPC_access
+
+ - @ref RC_mhttpd_custom_image
+      - @ref RC_mhttpd_custom_history
+      - @ref RC_mhttpd_custom_imagemap
+       - @ref RC_mhttpd_custom_getmouse 
+      -  @ref  RC_mhttpd_custom_Labels_Bars_Fills
+      - @ref RC_mhttpd_custom_edit_boxes
+
+<br>
+All these features will be described in the following sections.
+They apply to both \b external and \b internal web pages.
+\anchor idx_mhttpd_page_custom_external  
+\anchor mhttpd_custom_external
+Since external custom pages
+are more commonly used than internal, the examples in the following sections use \b external file(s).
+Examples of \b internal pages can be found  @ref RC_mhttpd_Internal "here".
+
+<br>
+<hr><br>
+@subsection RC_mhttpd_custom_including_js Including JavaScript code in an HTML custom page
+
+Javascript code can be inserted in the HTML file by enclosing it between the
+<span class="htmltag">\<script  type="text/javascript"\>  .....  \</script\></span> HTML tags, for example:
+<br>
+\code
+<!-- include some js code -->
+<script  type="text/javascript">
+\code
+var my_title="Gas Analyzer Custom Page"
+var my_name="GasAnalyzer"
+var my_num = 10;
+
+document.write('<title>T2KGas: ' +my_title+ '(' +my_num+ ')</title>');
+</script>
+\endcode
+<br>
+The <span class="htmltag">\<script ...\></span> HTML tag is also used to  @ref RC_mhttpd_include_js_library "include"
+the @ref RC_mhttpd_custom_js_lib in the custom page, to allow access to the ODB
+using the JavaScript (JS) @ref RC_mhttpd_js_library_features "built-in functions".
+<br>Custom pages may be written entirely in JavaScript, if preferred. For example, a file of user-written JavaScript functions can be 
+included into multiple HTML custom pages (provided links are created to these files in the ODB <span class="odb">/Custom</span>
+tree - see @ref  RC_mhttpd_Activate "details here").
+
+In the following HTML code fragment, the  @ref RC_mhttpd_custom_js_lib is included, as well as two user-written Javascript files.
+
+\code
+........
+<html>
+<head>
+<!-- include mhttpd js library   -->
+<script type="text/javascript"  src="/mhttpd.js">
+</script>
+
+<!-- js_constants! -> filename  names.js
+List of device names and corresponding index into arrays
+ -->
+<script type="text/javascript"  src="js_constants!">
+</script>
+
+<!-- js_functions! -> filename  common_functions.js
+ -->      
+<script type="text/javascript"  src="js_functions!">
+</script>
+.......
+\endcode
+
+
+
+<hr>
+
+@subsection RC_mhttpd_custom_key_access  Access to the ODB from a Custom Page 
+
+To include the custom features such as Buttons, ODB editing etc.
+a custom page needs to have at least one form declared with the
+HTML <span class="htmltag"> \<form...\>....\</form\> </span> tags.
+Declarations for buttons, ODB editing etc. must be inserted between the
+enclosing HTML <span class="htmltag">\<form...\> </span> tags, which are
+coded like this : 
+@code
+<form method="GET" action="http://hostname.domain:port/CS/\<Custom_page_key\>">
+.......
+.......
+</form>
+@endcode
+where  <span class="odb">Custom_page_key</span> is the name of the key that has been  
+@ref RC_odb_custom_keynames "defined in the /Custom ODB directory" in order to
+@ref RC_mhttpd_Activate "activate the custom page".
+
+<br>
+For a \b remote page defined using a key named <span class="odb">Test&</span>,
+the HTML <span class = "htmltag"> \<form...\> </span> tag might be
+@code
+<form method="GET" action="http://hostname.domain:port/CS/Test&"\>
+@endcode
+
+For a \b local page defined using a key named <span class="odb">MyExpt&</span>, the  <span class = "htmltag">\<form...\></span>
+tag might be
+@code
+<form name="form1" method="Get" action="/CS/MyExpt&">
+@endcode
+
+<br>
+
+<hr>
+
+\anchor idx_mhttpd_page_custom_refresh
+@subsection RC_mhttpd_custom_refresh Page refresh
+
+The following  <span class = "htmltag">\<meta...\> </span> tag included in the HTML header code will cause the whole custom page to refresh
+in 60 seconds :
+
+@code
+<meta http-equiv="Refresh" content="60">
+@endcode
+<br>
+
+\Note It is also possible to @ref RC_mhttpd_js_update_part "periodically update parts" of a custom page.
+
+
+<hr>
+
+@section RC_mhttpd_custom_midas_buttons Access to the standard MIDAS Menu buttons
+
+Access to the standard MIDAS Menu buttons can
+be provided with HTML  <span class = "htmltag">\<input...\></span> tags  of the form:
+-  <span class = "htmltag"> \<input name="cmd" value=\<\em button-name \>  type="submit" \> </span>
+
+Valid values are the standard MIDAS @ref RC_mhttpd_status_menu_buttons "Menu buttons" 
+(<span class="button">Start</span>  <span class="button">Pause</span>  <span class="button">Resume</span> 
+ <span class="button">Stop</span> <span class="button">ODB</span>  <span class="button">Elog</span> 
+ <span class="button">Alarms</span> <span class="button">History</span>  <span class="button">Programs</span>
+ etc). The  <span class = "htmltag">\<input...\></span> tags  must be declared
+within enclosing HTML <span class="htmltag">\<form...\>....\</form\> </span> tags (see @ref RC_mhttpd_custom_key_access "above").
+
+The following html fragment shows the inclusion of three of the standard buttons,
+giving access to the Main Status, ODB and Messages pages :
+@code
+<form name="form1" method="Get" action="/CS/MyExpt&">
+<input name="cmd" value="Status" type="submit">
+<input name="cmd" value="ODB" type="submit">
+<input name="cmd" value="Messages" type="submit">
+...
+</form>
+@endcode
+
+
+
+\anchor idx_redirect
+\anchor idx_mhttpd_custom_redirect
+@subsection RC_mhttpd_custom_redirect Redirect after Button is Pressed
+
+When buttons are included on a Custom Page, after pressing the button, it may be desirable to
+return to the same custom page.
+
+This can be done by including a hidden input tag with the name "redir". This name is detected by
+<span class="utility">mhttpd</span>, causing a redirect to the specified address, otherwise the Midas Main Status page will
+be shown. 
+
+e.g
+\code
+<!-- the following redirects screen back to custom page when buttons are pressed -->
+<input type=hidden name="redir" value="my_custom_page&">
+\endcode
+
+If instead of the Main Status Page a message <b>Invalid custom page: NULL path</b> is shown,
+and the URL is e.g. <i> myhost:8080/CS/ </i>,  redirect back to the Main Status Page as follows:
+\code
+<!-- the following redirects screen back to Main Status page when buttons are pressed 
+     if the default URL contains /CS   
+-->
+<input type=hidden name="redir" value="../">
+\endcode
+
+
+<hr>
+
+
+@section RC_mhttpd_custom_alias Alias Buttons and Hyperlinks
+Any hyperlink can easily be included on a custom page by using the standard HTML anchor <span class = "htmltag">\<a...\></span> tag, e.g.
+@code  
+<a href="http://ladd00.triumf.ca/~daqweb/doc/midas/html/">Midas Help</a>
+@endcode
+
+Links on a custom page equivalent to @ref  RC_mhttpd_status_Alias_buttons "alias-buttons" can also be made e.g.
+
+\code
+<button type="button" onclick="document.location.href='/Alias/alias&';">alias</button>
+@endcode
+
+
+
+@section RC_mhttpd_custom_simple_example Simple Example of a custom page in HTML
+Here is a simple example of an HTML custom page demonstrating the features described above, including access to
+ - the standard MIDAS Menu buttons
+    -  <span class="button">Status</span> and  <span class="button">ODB</span>
+ - alias buttons
+    -  <span class="button">TPC</span> is a local link through the <span class="odb">/alias</span> ODB tree 
+    -   <span class="button">triumf</span>  is an external link
+ - alias links
+    -  <span style="color:blue">TpcGasPlc</span> is a local link to  <span class="odb">/Equipment/TpcGasPlc</span>
+    -  <span style="color:blue">TPC Alias-link</span>" is a local link  through the <span class="odb">/alias</span> ODB tree (to same area as "TPC Button")
+
+ * <br>
+ * <center> 
+ * <span class="image">A simple custom page</span>
+ *  \image html simple_custom.jpg
+ * </center> 
+ * <br>
+
+The code for this page is shown below:
+ \code
+ <!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+<title>simple custom page</title>
+</head>
+<body>
+<form name="form1" method="Get" action="/CS/Colour&">
+<table style="text-align: center; width: 40%;" border="1" cellpadding="2" cellspacing="2">
+<tr>
+<td colspan="2"
+style="vertical-align: top; background-color: mediumslateblue; color: white; text-align: center;">
+Custom Page for experiment <odb src="/Experiment/Name">
+</td>
+</tr>
+<td
+style="vertical-align: top; background-color: lightyellow;  text-align: center;">
+Run Control Buttons:</td>
+<td
+style="vertical-align: top; background-color: lightyellow;  text-align: center;">
+<input name="cmd" value="Status" type="submit">
+<input name="cmd" value="ODB" type="submit">
+</td>
+</tr>
+<tr>
+<td
+style="vertical-align: top; background-color: seagreen; color: white; text-align: center;">Alias Buttons:</td>
+<td
+style="vertical-align: top; background-color: seagreen;  text-align: center;">
+<button type="button" onclick="document.location.href='/Alias/TPC Common&';">TPC Button</button>
+<button type="button" onclick="window.open('http://triumf.ca');">triumf</button>
+</td>
+</tr>
+<tr>
+<td
+style="vertical-align: top; background-color: fuschia;  text-align: center;">Links:</td>
+<td
+style="vertical-align: top; background-color: fuschia;  text-align: center;">
+<a href="/SC/TpcGasPlc">TpcGasPlc</a>
+<a href="/Alias/TPC Common&">TPC Alias-link</a>
+</td>
+</tr>
+</table>
+</form>
+</body>
+\endcode
+
+
+To create this page, you need an existing MIDAS experiment. To have all the buttons/links work, you need the
+ODB keys
+   -  <span class="odb">/Equipment/\<eqp-name\></span>  ( <span class="odb">/EquipmentTpcGasPlc</span> in the example)
+   -  <span class="odb">/Alias/\<alias-name\></span>  ( <span class="odb">/Equipment/TPC Common&</span> in the example)
+   
+ - create a file <i>custom.html</i> containing the above code. In this example, the code is in path <i>/home/mydir/custom.html</i>
+ - in  <i>custom.html</i>
+       -  change  <i>TPC Common&</i> to your <i> \<alias-name\> </i> if different
+       -  change  <i>TpcGasPlc</i> to your  <i>\<eqp-name\> </i> if different
+ - in the ODB for your experiment, create a key <span class="odb">/custom/test</span> as shown below:
+ \code
+     $ odb
+     [local:customgas:S]/>cd /custom
+     [local:customgas:S]/Custom>create string test
+     String length [32]:
+     [local:customgas:S]/Custom>set test "/home/mydir/custom.html"
+\endcode
+ - on the mhttpd status page for the experiment, there should now be a button labelled  <span class="button">custom</span> 
+ - click on the  <span class="button">custom</span>  button to see the custom page
+ 
+<br><hr><br>
+\anchor idx_mhttpd_buttons_customscript
+\anchor idx_mhttpd_custom_script-button
+@section RC_mhttpd_custom_script_buttons CustomScript Buttons
+
+CustomScript buttons can be provided on custom webpages. These buttons are equivalent to @ref RC_mhttpd_status_script_buttons
+on the MIDAS Main Status page, and allow a particular action to be performed when the button is pressed. 
+
+After pressing
+the button, the MIDAS Main Status page will be shown, unless a @ref  RC_mhttpd_custom_redirect "redirect input tag"
+is included to <b> redirect back to the custom page</b>.
+
+If the user defines a new tree in ODB named   <span class="odb">/CustomScript</span> ,
+then any key created in the  <span class="odb">/CustomScript</span> tree will appear as a 
+script-button of that name on a custom page that includes an HTML  <span class = "htmltag">\<input...\></span> tag of the form:
+\code
+        <input type=submit name=customscript value="my button">
+\endcode
+where the action of the button  <span class="button">my button</span> will be found in the  <span class="odb">/customscript/my button</span> subdirectory.
+
+\anchor idx_ODB_tree_customscript
+@subsection RC_odb_customscript_tree  ODB /CustomScript tree
+
+\note 
+The optional <span class="odb">/CustomScript</span> tree is applicable only to @ref RC_mhttpd "mhttpd", and ignored by 
+@ref RC_odbedit "odbedit".
+
+
+The syntax of CustomScript buttons in the  <span class="odb"> /customscript </span> directory is identical to that of
+the @ref RC_mhttpd_status_script_buttons  under the  <span class="odb">/Script</span> ODB directory, i.e.
+
+ - each sub-directory
+    ( <span class="odb">/CustomScript/\<button name>/</span>) should contain at least one string key which is the
+    custom script command to be executed.
+ - Further keys will be passed as  <b> arguments </b> to the script.
+ - MIDAS symbolic links are permitted.
+
+
+
+<br>
+@subsection RC_mhttpd_customscript_example  Example of CustomScript buttons and corresponding /CustomScript tree
+
+The following JavaScript fragment shows customscript buttons that appear only when the run is stopped. The  
+<span class="button">tri_config</span> button and, depending on the current experimental mode (given by variable <i> "ppg_mode" </i>), 
+three of the mode buttons 
+ <span class="button">1a</span>
+ <span class="button">1b</span>
+ <span class="button">1c</span> or
+ <span class="button">1d</span>. 
+@code
+ if (rstate == state_stopped) // run stopped
+{
+ document.write('<input name="customscript" value="tri_config" type="submit">');
+if(ppg_mode != '1a')
+  document.write('<input name="customscript" value="1a" type="submit">');
+if(ppg_mode != '1b')
+  document.write('<input name="customscript" value="1b" type="submit">');
+if(ppg_mode != '1c')
+ document.write('<input name="customscript" value="1c" type="submit">');
+if(ppg_mode != '1d')
+ document.write('<input name="customscript" value="1d" type="submit">');
+}
+@endcode
+
+The corresponding entry under /customscript is as shown below. The first button (tri_config) when pressed
+will cause a user-written program <i> tri_config </i> to be executed. The other buttons <span class="button">1a</span>, 
+ <span class="button">1b</span> etc. when pressed will cause the
+current experimental mode to be changed to that mode. Only the entry for  <span class="button">1a</span> is shown.
+@code
+[local:ebit:S]/>ls /customscript/tri_config
+cmd                             /home/ebit/online/ppg/perl/exec.pl
+include path                    /home/ebit/online/ppg/perl/
+experiment name -> /experiment/Name
+                                ebit
+execute                         '/home/ebit/online/ppg/tri_config -s'
+beamline                        ebit
+
+[local:ebit:S]/>ls /customscript/1a
+cmd                             /home/ebit/online/ppg/perl/change_mode.pl
+include path                    /home/ebit/online/ppg/perl/
+experiment name -> /experiment/Name
+                                ebit
+ppg_mode                        1a
+modefile                        defaults
+@endcode
+
+
+These buttons are illustrated in the example @ref RC_Ebit_custom_page
+
+
+<br><hr><br>
+
+
+\anchor idx_ODBGetMsg-JavaScript-function
+@section  RC_mhttpd_custom_getmsg  Access to message log  using JavaScript function ODBGetMsg
+
+The message log (see @ref F_Messaging) can be accessed from a custom page using a call to the
+@ref RC_mhttpd_custom_js_lib  "JavaScript library function"  <span class="js"> ODBGetMsg </span> (provided the JS library is
+\ref RC_mhttpd_include_js_library "included"). There is no HTML equivalent to this JS function.
+<br>
+
+<br>
+<table
+ style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="0">
+  <caption>Above: JavaScript function ODBGetMsg
+  </caption>
+<tr>
+<td colspan="1" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">JavaScript Function</td>
+</td>
+ <td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Purpose
+</td>
+ <td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Parameters
+</td>
+</tr> 
+<!--   line    1     -->
+<tr>
+<td style="vertical-align: top; background-color: white; font-weight: bold; text-align: left;">
+<span class="js">ODBGetMsg(n)</span>
+</td>
+<td style="vertical-align: top; background-color: white; font-weight: normal; text-align: left;">
+Get the most recent \b n lines from the system message log
+</td>
+<td style="vertical-align: top; background-color: white; font-weight: normal; text-align: left;">
+\b n  number of lines required 
+</td>
+</tr>
+</table>
+<br>
+ This allows the inclusion of the "Last Midas message" on a custom page.
+e.g.
+@code
+<script>
+var message;
+message= ODBGetMsg(1);
+document.write('Last message:'+message+'<br>');
+</script>
+@endcode
+
+ * <br>
+ * <center> 
+ * <span class="image">A simple custom page with a call to ODBGetMsg()</span>
+ *  \image html simple_msg.jpg
+ * </center> 
+ * <br>
+
+The Javascript call has been added to the  @ref RC_mhttpd_custom_simple_example  above, by
+ - adding access to the standard MIDAS Javascript library to the header
+ - adding the call to <script class="js">ODBGetMsg()</script>
+
+as detailed below: 
+\code
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+<title> table test</title>
+<script type="text/javascript" src="../mhttpd.js"></script>
+</head>
+............
+............
+</table>
+
+<script>
+var message;
+message= ODBGetMsg(1);
+document.write('<h2>Last message:</h2>'+message+'<br>');
+</script>
+</form>
+</body>
+\endcode
+
+
+
+<br><hr><br>
+
+
+\anchor idx_ODBGenerateMsg-JavaScript-function
+@section  RC_mhttpd_custom_generatemsg  Generate a message log entry using JavaScript function ODBGenerateMsg
+
+A custom page can generate a message to be sent to the MIDAS message log (see @ref F_Messaging). This may be done with a call to the
+@ref RC_mhttpd_custom_js_lib  "JavaScript library function"  <span class="js"> ODBGenerateMsg </span> (provided the JS library is
+\ref RC_mhttpd_include_js_library "included").  There is no HTML equivalent to this JS function.
+<br>
+
+<br>
+<table
+ style="text-align: left; width: 100%;" border="1" cellpadding="2"
+cellspacing="0">
+  <caption>Above: JavaScript function ODBGenerateMsg
+  </caption>
+<tr>
+<td colspan="1" style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">JavaScript Function</td>
+</td>
+ <td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Purpose
+</td>
+ <td style="vertical-align: top; background-color: rgb(204, 204, 255); font-weight: bold; text-align: center;">
+Parameters
+</td>
+</tr> 
+<!--   line    1     -->
+<tr>
+<td style="vertical-align: top; background-color: white; font-weight: bold; text-align: left;">
+<span class="js"> ODBGenerateMsg(message)</span>
+</td>
+<td style="vertical-align: top; background-color: white; font-weight: normal; text-align: left;">
+Send a message to the system message log
+</td>
+<td style="vertical-align: top; background-color: white; font-weight: normal; text-align: left;">
+\b message <&nbsp><&nbsp> string containing the message
+</td>
+</tr>
+</table>
+<br>
+
+
+\b Usage
+\code
+ODBGenerateMsg("Unable to read new data")
+\endcode
+
+\b Example
+\code
+ODBGenerateMsg("This is a test from custom page \"try\" ");
+document.write('<br>Last Message: '+ODBGetMsg(1));
+\endcode
+
+\b Output from the above example
+\code
+Last Message: Tue Jul 5 11:24:30 2011 [mhttpd,INFO] This is a test from custom page "try" 
+\endcode
+
+
+<br><hr><br>
+
+
+ - \subpage  RC_mhttpd_custom_ODB_access
+ - \subpage  RC_mhttpd_custom_RPC_access
+ - \subpage  RC_mhttpd_Image_access
+ - \subpage  RC_mhttpd_custom_status
+
+<br>
+<br>
+\anchor end
+\htmlonly 
+<script type="text/javascript">
+// pages parameters: back index next {top bottom}
+pages( "RC_mhttpd_custom_js_lib", "RunControl","RC_mhttpd_custom_ODB_access", "RC_mhttpd_custom_features", "" );
+sections("Features", "RunControl","FrontendOperation"); // last section; top of this section; next section
+</script>
+\endhtmlonly 
+
+
+<!--- end of page  RC_mhttpd_custom_features -->
+*/
+
