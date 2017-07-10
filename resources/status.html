@@ -322,10 +322,25 @@
           if (!equipmentJson[equipKeys[i]].common) {
 
             let statusItem=document.createElement("td");
+            statusItem.align="center";
             statusItem.innerHTML=equipmentJson[equipKeys[i+1]].common["status"];
-            if( equipmentJson[equipKeys[i+1]].common["status"]=="Ok"){
-              statusItem.className="greenLight";
-            }else{statusItem.className="redLight";}
+            if( equipmentJson[equipKeys[i+1]].common["status"].length<1){
+              statusItem.className="mgreencolour greenLight";
+            }else if(equipmentJson[equipKeys[i+1]].common["status color"].indexOf("Light")!=-1){
+              statusItem.className=equipmentJson[equipKeys[i+1]].common["status"];
+            }else{
+              statusItem.className="Light";
+              statusItem.style="background-color:"+equipmentJson[equipKeys[i+1]].common["status color"]+";";
+            }
+
+
+            let eventsNum=equipmentJson[equipKeys[i+1]].statistics["events sent"];
+            if(equipmentJson[equipKeys[i+1]].statistics["events sent"]>1E9){
+              eventsNum=(equipmentJson[equipKeys[i+1]].statistics["events sent"]/1E9).toFixed(3)+"G";
+            }else if(equipmentJson[equipKeys[i+1]].statistics["events sent"]>1E6){
+              eventsNum=(equipmentJson[equipKeys[i+1]].statistics["events sent"]/1E6).toFixed(3)+"M";
+            }
+
             //alert(statusItem.outerHTML)
             document.getElementById("stripeList").innerHTML += "<tr><td><a href='/Equipment/" + equipmentJson[equipKeys[i]] +
                                                               "/Variables'>" + 
@@ -333,8 +348,7 @@
                                                               "</a></td>"+
                                                               statusItem.outerHTML+
                                                               "<td>"+
-                                                              equipmentJson[equipKeys[i+1]].statistics["events sent"]+
-                                                              //.statistics["events sent"]+
+                                                              eventsNum+
                                                               "</td>"+
                                                               "<td>"+
                                                               equipmentJson[equipKeys[i+1]].statistics["events per sec."].toFixed(1)+
