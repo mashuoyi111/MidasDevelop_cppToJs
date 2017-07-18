@@ -166,7 +166,7 @@
 
 
 
-    function callback(rpc, alarm, loggerBool, lastMessage, equipmentNames, equipmentData) {
+    function callback(rpc, alarm, loggerBool, lastMessage, equipmentNames,equipmentStatData, equipmentCommonData) {
 
 
       // define all json data here
@@ -190,7 +190,6 @@
                 let newAlarm = document.createElement("td");
                 document.getElementById("statusTable").insertBefore(newAlarm, document.getElementById("statusTable").firstChild);
 
-                //alert(JSON.stringify(allAlarms[element]));
                 newAlarm.outerHTML = "<tr id=\"" +
                   element +
                   "Alarm" +
@@ -364,30 +363,29 @@
         if (equipmentNames.length != document.getElementsByClassName("equipmentRow").length) {
           document.getElementById("equipmentList").innerHTML = equipmentTableHtml;
         }
-        
+
 
         for (i = 0; i < equipmentNames.length; i++) {
           let statusItem = document.createElement("td");
           statusItem.align = "center";
-          statusItem.innerHTML = equipmentData[i][1]["status"];
-          if (equipmentData[i][1]["status"].length < 1) {
+          statusItem.innerHTML = equipmentCommonData[i]["status"];
+          if (equipmentCommonData[i]["status"].length < 1) {
             statusItem.className = "mgreencolour greenLight";
-          } else if (equipmentData[i][1]["status color"].indexOf("Light") != -1) {
-            statusItem.className = equipmentData[i][1]["status"];
+          } else if (equipmentCommonData[i]["status color"].indexOf("Light") != -1) {
+            statusItem.className = equipmentCommonData[i]["status"];
           } else {
             statusItem.className = "Light";
-            statusItem.style = "background-color:" + equipmentData[i][1]["status color"] + ";";
+            statusItem.style = "background-color:" + equipmentCommonData[i]["status color"] + ";";
           }
 
 
-          let eventsNum = equipmentData[i][0]["events sent"];
-          if (equipmentData[i][0]["events sent"] > 1E9) {
-            eventsNum = (equipmentData[i][0]["events sent"] / 1E9).toFixed(3) + "G";
-          } else if (equipmentData[i][0]["events sent"] > 1E6) {
-            eventsNum = (equipmentData[i][0]["events sent"] / 1E6).toFixed(3) + "M";
+          let eventsNum = equipmentStatData[i]["events sent"];
+          if (equipmentStatData[i]["events sent"] > 1E9) {
+            eventsNum = (equipmentStatData[i]["events sent"] / 1E9).toFixed(3) + "G";
+          } else if (equipmentStatData[i]["events sent"] > 1E6) {
+            eventsNum = (equipmentStatData[i]["events sent"] / 1E6).toFixed(3) + "M";
           }
 
-          //alert(statusItem.outerHTML)
           let equipmentRow = document.createElement("tr");
           equipmentRow.id = equipmentNames[i] + "equipment";
           equipmentRow.className = "equipmentRow mtablecss";
@@ -401,10 +399,10 @@
             eventsNum +
             "</td>" +
             "<td align=\"center\">" +
-            equipmentData[i][0]["events per sec."].toFixed(1) +
+            equipmentStatData[i]["events per sec."].toFixed(1) +
             "</td>" +
             "<td align=\"center\">" +
-            equipmentData[i][0]["kbytes per sec."].toFixed(3) +
+            equipmentStatData[i]["kbytes per sec."].toFixed(3) +
             "</td>";
           if (document.getElementById(equipmentNames[i] + "equipment") === null) {
             document.getElementById("equipmentList").appendChild(equipmentRow);
@@ -660,23 +658,31 @@
                 let equipmentList = Object.keys(equipmentListData.result.data[0]);
 
                 //push all equipment names into an Array of Promises
-                let equipmentPromiseList = equipmentList.map(function (element) {
-                  return mjsonrpc_db_get_values(["/Equipment/" + element + "/statistics", "/Equipment/" + element + "/common"])
+                let equipmentStatList = equipmentList.map(function (element) {
+                  return "/Equipment/" + element + "/statistics";
+                });
+
+                let equipmentCommonList = equipmentList.map(function (element) {
+                  return "/Equipment/" + element + "/common";
                 });
                 //Call all the Promises to get "common" and "statistics" subtrees of all equipments
-                Promise.all(equipmentPromiseList).then(function (equipmentData) {
-                  equipmentData = equipmentData.map(function (element) {
-                    return element.result.data;
+                mjsonrpc_db_get_values(equipmentStatList).then(function (equipmentStatData) {
+
+                  equipmentStatData = equipmentStatData.result.data;
+
+                  mjsonrpc_db_get_values(equipmentCommonList).then(function (equipmentCommonData) {
+
+                    equipmentCommonData = equipmentCommonData.result.data;
+
+                    if (rpc.hasOwnProperty("result") && alarmData.hasOwnProperty("result") && alarmData["result"].hasOwnProperty("alarm_system_active") && loggerData.hasOwnProperty("result") && lastMessageData.hasOwnProperty("result")) {
+                      callback(rpc["result"], alarmData["result"], loggerData["result"], lastMessageData["result"], equipmentList, equipmentStatData, equipmentCommonData);
+                    }
+
+                  }).then(function (x) {
+                    // show the page only after all contents are loaded
+                    document.getElementById('updateStatus').style = "display:none";
+                    document.getElementById('whole_content').style = "display:block";
                   });
-
-                  if (rpc.hasOwnProperty("result") && alarmData.hasOwnProperty("result") && alarmData["result"].hasOwnProperty("alarm_system_active") && loggerData.hasOwnProperty("result") && lastMessageData.hasOwnProperty("result")) {
-                    callback(rpc["result"], alarmData["result"], loggerData["result"], lastMessageData["result"], equipmentList, equipmentData);
-                  }
-
-                }).then(function (x) {
-                  // show the page only after all contents are loaded
-                  document.getElementById('updateStatus').style = "display:none";
-                  document.getElementById('whole_content').style = "display:block";
                 });
               });
             });
