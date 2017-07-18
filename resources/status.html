@@ -11,7 +11,7 @@
   <title>status</title>
 </head>
 
-<body id="whole_content" style="display:none" class="mcss">
+<body class="mcss">
 
   <script>
     url = mhttpd_getParameterByName("URL");
@@ -19,7 +19,7 @@
       mjsonrpc_set_url(url);
   </script>
 
-  <div class="mwrapper">
+  <div id="whole_content" style="display:none" class="mwrapper">
 
 
     <script>
@@ -27,7 +27,7 @@
     </script>
 
 
-   <!-- Custom page will not work in the old way <table class="headerTable">
+    <!-- Custom page will not work in the old way <table class="headerTable">
       <tr>
         <td colspan="6">
           
@@ -89,7 +89,7 @@
 
           </table>
 
-          </td>
+        </td>
       </tr>
 
 
@@ -146,6 +146,9 @@
   </div>
   <div class="mpush">
   </div>
+  <div id="updateStatus" align="left">
+    Loading...
+  </div>
   <script>
       mhttpd_page_footer();
   </script>
@@ -163,18 +166,18 @@
 
 
 
-    function callback(rpc, alarm, loggerBool) {
+    function callback(rpc, alarm, loggerBool, lastMessage, equipmentNames, equipmentData) {
 
 
       // define all json data here
-      let experimentItemsJson = rpc.result.data[0];
-      let equipmentJson = rpc.result.data[1];
-      let logChannelJson = rpc.result.data[2];
-      let clientsJson = rpc.result.data[3];
-      let runinfoJson = rpc.result.data[4];
-      let sequencerJson = rpc.result.data[5];
-      let loggerJson = rpc.result.data[6];
-      let LazyJson = rpc.result.data[7];
+      let experimentItemsJson = rpc.data[0];
+      let logChannelJson = rpc.data[1];
+      let clientsJson = rpc.data[2];
+      let runinfoJson = rpc.data[3];
+      let sequencerJson = rpc.data[4];
+      let loggerJson = rpc.data[5];
+      let LazyJson = rpc.data[6];
+      //let equipmentJson = rpc.data[1];
 
       let currentClientList = new Array();
 
@@ -347,68 +350,70 @@
           document.getElementById("runStatusLogger").innerHTML = "Logger not running";
           document.getElementById("runStatusLogger").className = "mredcolour redLight";
         }
+
+        document.getElementById("msgService").innerHTML = lastMessage.messages;
+
+
+
       }
 
 
       function generateEquipmentTable() {
 
-        let equipKeys = Object.keys(equipmentJson);
 
-        if (equipKeys.length / 2 != document.getElementsByClassName("equipmentRow").length) {
+        if (equipmentNames.length != document.getElementsByClassName("equipmentRow").length) {
           document.getElementById("equipmentList").innerHTML = equipmentTableHtml;
         }
+        
+
+        for (i = 0; i < equipmentNames.length; i++) {
+          let statusItem = document.createElement("td");
+          statusItem.align = "center";
+          statusItem.innerHTML = equipmentData[i][1]["status"];
+          if (equipmentData[i][1]["status"].length < 1) {
+            statusItem.className = "mgreencolour greenLight";
+          } else if (equipmentData[i][1]["status color"].indexOf("Light") != -1) {
+            statusItem.className = equipmentData[i][1]["status"];
+          } else {
+            statusItem.className = "Light";
+            statusItem.style = "background-color:" + equipmentData[i][1]["status color"] + ";";
+          }
 
 
-        for (i = 0; i < equipKeys.length; i++) {
-          if (!equipmentJson[equipKeys[i]].common) {
+          let eventsNum = equipmentData[i][0]["events sent"];
+          if (equipmentData[i][0]["events sent"] > 1E9) {
+            eventsNum = (equipmentData[i][0]["events sent"] / 1E9).toFixed(3) + "G";
+          } else if (equipmentData[i][0]["events sent"] > 1E6) {
+            eventsNum = (equipmentData[i][0]["events sent"] / 1E6).toFixed(3) + "M";
+          }
 
-            let statusItem = document.createElement("td");
-            statusItem.align = "center";
-            statusItem.innerHTML = equipmentJson[equipKeys[i + 1]].common["status"];
-            if (equipmentJson[equipKeys[i + 1]].common["status"].length < 1) {
-              statusItem.className = "mgreencolour greenLight";
-            } else if (equipmentJson[equipKeys[i + 1]].common["status color"].indexOf("Light") != -1) {
-              statusItem.className = equipmentJson[equipKeys[i + 1]].common["status"];
-            } else {
-              statusItem.className = "Light";
-              statusItem.style = "background-color:" + equipmentJson[equipKeys[i + 1]].common["status color"] + ";";
-            }
-
-
-            let eventsNum = equipmentJson[equipKeys[i + 1]].statistics["events sent"];
-            if (equipmentJson[equipKeys[i + 1]].statistics["events sent"] > 1E9) {
-              eventsNum = (equipmentJson[equipKeys[i + 1]].statistics["events sent"] / 1E9).toFixed(3) + "G";
-            } else if (equipmentJson[equipKeys[i + 1]].statistics["events sent"] > 1E6) {
-              eventsNum = (equipmentJson[equipKeys[i + 1]].statistics["events sent"] / 1E6).toFixed(3) + "M";
-            }
-
-            //alert(statusItem.outerHTML)
-            let equipmentRow = document.createElement("tr");
-            equipmentRow.id = equipmentJson[equipKeys[i]] + "equipment";
-            equipmentRow.className = "equipmentRow mtablecss";
-            equipmentRow.innerHTML = "<td align=\"center\"><a href='/Equipment/" +
-              equipmentJson[equipKeys[i]] +
-              "/Variables'>" +
-              equipmentJson[equipKeys[i]] +
-              "</a></td>" +
-              statusItem.outerHTML +
-              "<td align=\"center\">" +
-              eventsNum +
-              "</td>" +
-              "<td align=\"center\">" +
-              equipmentJson[equipKeys[i + 1]].statistics["events per sec."].toFixed(1) +
-              "</td>" +
-              "<td align=\"center\">" +
-              equipmentJson[equipKeys[i + 1]].statistics["kbytes per sec."].toFixed(3) +
-              "</td>";
-            if (document.getElementById(equipmentJson[equipKeys[i]] + "equipment") === null) {
-              document.getElementById("equipmentList").appendChild(equipmentRow);
-            } else {
-              if (document.getElementById(equipmentJson[equipKeys[i]] + "equipment").innerHTML != equipmentRow.innerHTML) {
-                document.getElementById(equipmentJson[equipKeys[i]] + "equipment").innerHTML = equipmentRow.innerHTML;
-              }
+          //alert(statusItem.outerHTML)
+          let equipmentRow = document.createElement("tr");
+          equipmentRow.id = equipmentNames[i] + "equipment";
+          equipmentRow.className = "equipmentRow mtablecss";
+          equipmentRow.innerHTML = "<td align=\"center\"><a href='/Equipment/" +
+            equipmentNames[i] +
+            "/Variables'>" +
+            equipmentNames[i] +
+            "</a></td>" +
+            statusItem.outerHTML +
+            "<td align=\"center\">" +
+            eventsNum +
+            "</td>" +
+            "<td align=\"center\">" +
+            equipmentData[i][0]["events per sec."].toFixed(1) +
+            "</td>" +
+            "<td align=\"center\">" +
+            equipmentData[i][0]["kbytes per sec."].toFixed(3) +
+            "</td>";
+          if (document.getElementById(equipmentNames[i] + "equipment") === null) {
+            document.getElementById("equipmentList").appendChild(equipmentRow);
+          } else {
+            if (document.getElementById(equipmentNames[i] + "equipment").innerHTML != equipmentRow.innerHTML) {
+              document.getElementById(equipmentNames[i] + "equipment").innerHTML = equipmentRow.innerHTML;
             }
           }
+
         }
       }
 
@@ -471,7 +476,7 @@
 
             let logChannelRow = document.createElement("tr");
             logChannelRow.id = element + "channel";
-            logChannelRow.className = "logChannel";
+            logChannelRow.className = "logChannel mtablecss";
             logChannelRow.innerHTML = "<td colspan=\"2\" class=\"mgreencolour greenLight\">" +
               "<a href=\"Logger/Channels/" + element + "/Settings\">" +
               "#" + element + ": " + "</a>" +
@@ -522,7 +527,7 @@
 
             let logChannelLazy = document.createElement("tr");
             logChannelLazy.id = element + "channelLazy";
-            logChannelLazy.className = "logChannelLazy"
+            logChannelLazy.className = "logChannelLazy mtablecss";
             logChannelLazy.innerHTML = "<td colspan=\"2\" >" +
               "<a href=\"Lazy/" + element + "/Settings\">" +
               element + "</a>" +
@@ -632,28 +637,56 @@
       document.getElementById('mhttpd_last_updated').innerHTML = new Date;
 
 
-      let paths = ["/Experiment/Status items", "/equipment", "/Logger/Channels", "/System/Clients", "/Runinfo", "Sequencer/State", "/Logger", "/Lazy"];
+      let paths = ["/Experiment/Status items", "/Logger/Channels", "/System/Clients", "/Runinfo", "Sequencer/State", "/Logger", "/Lazy"];
+
+
 
       // get main ODB info
-      mjsonrpc_db_get_values(paths).then(function (rpc1) {
-        // get equipment list
+      mjsonrpc_db_get_values(paths).then(function (rpc) {
 
-        // get alarms
-        mjsonrpc_call("get_alarms").then(function (rpc2) {
+        // get alarms status
+        mjsonrpc_call("get_alarms").then(function (alarmData) {
+
           // check if logger is running
-          mjsonrpc_call("cm_exist", "{ \"name\": \"Logger\" }").then(function (rpc3) {
-            if (rpc2.hasOwnProperty("result") && rpc2["result"].hasOwnProperty("alarm_system_active") && rpc3.hasOwnProperty("result")) {
-              callback(rpc1, rpc2["result"], rpc3["result"]);
-            }
-          }).then(function (x) {
-            // show the page only after all contents are loaded
-            document.getElementById('whole_content').style = "display:block";
+          mjsonrpc_call("cm_exist", "{ \"name\": \"Logger\" }").then(function (loggerData) {
+
+            // get the lastest one message
+            mjsonrpc_call("cm_msg_retrieve", { "min_messages": 1 }).then(function (lastMessageData) {
+
+              // get all equipment names using mjsonrpc_db_ls 
+              mjsonrpc_db_ls(["Equipment"]).then(function (equipmentListData) {
+
+                //get all equipment names into an Array
+                let equipmentList = Object.keys(equipmentListData.result.data[0]);
+
+                //push all equipment names into an Array of Promises
+                let equipmentPromiseList = equipmentList.map(function (element) {
+                  return mjsonrpc_db_get_values(["/Equipment/" + element + "/statistics", "/Equipment/" + element + "/common"])
+                });
+                //Call all the Promises to get "common" and "statistics" subtrees of all equipments
+                Promise.all(equipmentPromiseList).then(function (equipmentData) {
+                  equipmentData = equipmentData.map(function (element) {
+                    return element.result.data;
+                  });
+
+                  if (rpc.hasOwnProperty("result") && alarmData.hasOwnProperty("result") && alarmData["result"].hasOwnProperty("alarm_system_active") && loggerData.hasOwnProperty("result") && lastMessageData.hasOwnProperty("result")) {
+                    callback(rpc["result"], alarmData["result"], loggerData["result"], lastMessageData["result"], equipmentList, equipmentData);
+                  }
+
+                }).then(function (x) {
+                  // show the page only after all contents are loaded
+                  document.getElementById('updateStatus').style = "display:none";
+                  document.getElementById('whole_content').style = "display:block";
+                });
+              });
+            });
           });
         });
-
       }).catch(function (error) {
         document.getElementById('updateStatus').innerHTML = "RWE: RPC or JS error: " + mjsonrpc_decode_error(error);
+        document.getElementById('updateStatus').style = "display:block";
       });
+
 
 
 
