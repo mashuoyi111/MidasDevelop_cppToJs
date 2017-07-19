@@ -610,7 +610,7 @@
 
       // set title
       if (experimentItemsJson) {
-        if (experimentItemsJson.hasOwnProperty("experiment name")) {
+        if (experimentItemsJson.hasOwnProperty("experiment name")&&(document.title!=experimentItemsJson["experiment name"] + " status")) {
           document.title = experimentItemsJson["experiment name"] + " status";
         }
       }
