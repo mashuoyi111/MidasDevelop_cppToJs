@@ -36,7 +36,7 @@
     </table>-->
 
 
-    <table class="mtablecss subStatusTable" id="statusTable">
+    <table class="mstatusTable" id="statusTable">
 
 
 
@@ -44,9 +44,9 @@
       <tr>
         <td colspan="6">
 
-          <table class="mtablecss subStatusTable" id="runStatus" width="100%">
+          <table class="mtablecss" id="runStatus" width="100%">
             <tr>
-              <td colspan=5 class="mtableheadercss subStatusTitle">Run Status</td>
+              <td colspan="6" class="mtableheadercss">Run Status</td>
             </tr>
 
             <tr align="center">
@@ -82,7 +82,7 @@
             </tr>
 
             <tr>
-              <td colspan=6 id="msgService" class="mmsgService">
+              <td colspan="6" id="msgService" class="mmsgService">
 
               </td>
             </tr>
@@ -96,12 +96,12 @@
       <tr>
         <td colspan="6">
 
-          <table class="mtablecss subStatusTable" id="equipmentList" width="100%">
+          <table class="mtablecss" id="equipmentList" width="100%">
             <tr>
-              <th colspan=5 class="mtableheadercss subStatusTitle">Equipment</th>
+              <th colspan="6" class="mtableheadercss">Equipment</th>
             </tr>
             <tr></tr>
-            <tr class="titleRow">
+            <tr class="">
               <th>Equipment</th>
               <th>Status</th>
               <th>Events</th>
@@ -116,9 +116,9 @@
       <tr>
         <td colspan="6">
 
-          <table class="mtablecss subStatusTable" id="logChannel" width="100%">
+          <table class="mtablecss" id="logChannel" width="100%">
             <tr>
-              <td colspan=5 class="mtableheadercss subStatusTitle">Logging Channels</td>
+              <td colspan="6" class="mtableheadercss">Logging Channels</td>
             </tr>
 
 
@@ -130,10 +130,10 @@
       <tr>
         <td colspan="6">
 
-          <table class="mtablecss subStatusTable" id="clientsTable" width="100%">
+          <table class="mtablecss" id="clientsTable" width="100%">
             <tr></tr>
             <tr>
-              <td colspan=6 class="mtableheadercss subStatusTitle">Clients</td>
+              <td colspan="6" class="mtableheadercss">Clients</td>
             </tr>
 
           </table>
@@ -158,11 +158,11 @@
 
     //pre-define some html codes for different tables/rows
 
-    const equipmentTableHtml = "<tr><th colspan=6 class=\"mtableheadercss subStatusTitle\">Equipment</th></tr><tr></tr><tr class=\"titleRow\"><th>Equipment</th><th>Status</th><th>Events</th><th>Events[/s]</th><th>Data[MS/s]</th></tr>";
-    const logChannelTableHtml = "<tr><td colspan=5 class=\"mtableheadercss subStatusTitle\">Logging Channels</td></tr>";
-    const firstLogChannelHtml = "<tr id=\"logChannelFirstPart\" class=\"mtabletitlecss titleRow\"><th colspan=\"2\">Channel</th><th>Events</th><th>MiB written</th><th>Compr.</th><th>Disk Level</th></tr>";
-    const secondLogChannelHtml = "<tr id=\"logChannelSecondPart\" class=\"mtabletitlecss titleRow\"><th colspan=\"2\">Lazy Label</th><th>Progress</th><th>File Name</th><th># Files</th><th>Total</th></tr>";
-    const clientTableHtml = "<tr></tr><tr><td colspan=6 class=\"mtableheadercss subStatusTitle\">Clients</td></tr>";
+    const equipmentTableHtml = "<tr><th colspan=6 class=\"mtableheadercss\">Equipment</th></tr><tr></tr><tr class=\"\"><th>Equipment</th><th>Status</th><th>Events</th><th>Events[/s]</th><th>Data[MS/s]</th></tr>";
+    const logChannelTableHtml = "<tr><td colspan=6 class=\"mtableheadercss\">Logging Channels</td></tr>";
+    const firstLogChannelHtml = "<tr id=\"logChannelFirstPart\" class=\"mtabletitlecss \"><th colspan=\"2\">Channel</th><th>Events</th><th>MiB written</th><th>Compr.</th><th>Disk Level</th></tr>";
+    const secondLogChannelHtml = "<tr id=\"logChannelSecondPart\" class=\"mtabletitlecss \"><th colspan=\"2\">Lazy Label</th><th>Progress</th><th>File Name</th><th># Files</th><th>Total</th></tr>";
+    const clientTableHtml = "<tr></tr><tr><td colspan=6 class=\"mtableheadercss\">Clients</td></tr>";
 
 
 

@@ -76,6 +76,14 @@ input.mnavcss:hover, .mbuttoncss:hover {
 
 /* table formatting */
 
+.mstatusTable{
+	margin-left: auto;
+    margin-right: auto;
+    margin-top: 12px;
+    margin-bottom: 12px;
+	background-color: #EEEEEE;
+}
+
 .mtablecss {
     border: 2px solid #00B26B;
     border-radius: 12px;
