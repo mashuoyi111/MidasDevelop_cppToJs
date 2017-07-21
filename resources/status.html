@@ -298,26 +298,35 @@
               document.getElementById("runStatusExperimentName").innerHTML = experimentItemsJson["experiment name"];
             }
             // check if lazy active is in the experiment items list
-            if (experimentItemsJson.hasOwnProperty("lazy active")) {
 
-              let experimentLazy = document.createElement("tr");
-              experimentLazy.id = "experimentLazy";
-              experimentLazy.innerHTML =
-                "<tr><td style=\"text-align:left;\" width=\"30%\" class=\"titleCell\"> Lazy Active: </td>" +
-                "<td id=\"experimentLazyBool\"; style=\"text-align:left;\">" +
-                experimentItemsJson["lazy active"] +
-                "</td>" +
-                "</tr>";
-              experimentLazy.className = "mtablecss";
+            let experimentItemList = Object.keys(experimentItemsJson);
+            if (experimentItemList.length > 3) {
+              for (i = 3; i < experimentItemList.length; i = i + 3) {
 
-              if (document.getElementById("experimentLazy") === null) {
-                document.getElementById("runStatusExperimentItems").appendChild(experimentLazy);
-              } else {
-                if (document.getElementById("experimentLazyBool").innerHTML != experimentItemsJson["lazy active"].toString()) {
-                  document.getElementById("experimentLazyBool").innerHTML = experimentItemsJson["lazy active"];
+                let experimentItem = document.createElement("tr");
+                experimentItem.id = experimentItemList[i + 2] + "ExperimentItem";
+                experimentItem.innerHTML =
+                  "<tr><td style=\"text-align:left;\" width=\"30%\" class=\"titleCell\">" +
+                  experimentItemsJson[experimentItemList[i]] +
+                  ":</td>" +
+                  "<td id=\"experimentLazyBool\"; style=\"text-align:left;\">" +
+                  experimentItemsJson[experimentItemList[i + 2]] +
+                  "</td>" +
+                  "</tr>";
+                experimentItem.className = "mtablecss";
+
+                if (document.getElementById(experimentItemList[i + 2] + "ExperimentItem") != null) {
+                  if (document.getElementById(experimentItemList[i + 2] + "ExperimentItem").innerHTML != experimentItem.innerHTML) {
+                    document.getElementById(experimentItemList[i + 2] + "ExperimentItem").innerHTML = experimentItem.innerHTML;
+                  }
                 }
+                else {
+                  document.getElementById("runStatusExperimentItems").appendChild(experimentItem);
+                }
+
               }
             }
+
           }
 
         }
@@ -366,7 +375,7 @@
 
 
         for (i = 0; i < equipmentNames.length; i++) {
-          if (!equipmentCommonData[i]["hidden"]){
+          if (!equipmentCommonData[i]["hidden"]) {
             let statusItem = document.createElement("td");
             statusItem.align = "center";
             statusItem.innerHTML = equipmentCommonData[i]["status"];
