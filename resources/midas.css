@@ -132,3 +132,8 @@ div.mpush{
 }
 
 /* end */
+
+.hideButton{
+    text-decoration : none; 
+    color : #696969;
+}

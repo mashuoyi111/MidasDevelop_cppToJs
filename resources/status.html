@@ -102,7 +102,7 @@
             </tr>
             <tr></tr>
             <tr class="">
-              <th>Equipment</th>
+              <th>Equipment<a id='hide' class='hideButton' href="javascript:unhideEquipments()">+</a></th>
               <th>Status</th>
               <th>Events</th>
               <th>Events[/s]</th>
@@ -158,7 +158,7 @@
 
     //pre-define some html codes for different tables/rows
 
-    const equipmentTableHtml = "<tr><th colspan=6 class=\"mtableheadercss\">Equipment</th></tr><tr></tr><tr class=\"\"><th>Equipment</th><th>Status</th><th>Events</th><th>Events[/s]</th><th>Data[MS/s]</th></tr>";
+    const equipmentTableHtml = "<tr><th colspan=6 class=\"mtableheadercss\">Equipment</th></tr><tr></tr><tr class=\"\"><th>Equipment&nbsp;<a id='hide' class='hideButton' href=\"javascript:unhideEquipments()\">+</a></th><th>Status</th><th>Events</th><th>Events[/s]</th><th>Data[MS/s]</th></tr>";
     const logChannelTableHtml = "<tr><td colspan=6 class=\"mtableheadercss\">Logging Channels</td></tr>";
     const firstLogChannelHtml = "<tr id=\"logChannelFirstPart\" class=\"mtabletitlecss \"><th colspan=\"2\">Channel</th><th>Events</th><th>MiB written</th><th>Compr.</th><th>Disk Level</th></tr>";
     const secondLogChannelHtml = "<tr id=\"logChannelSecondPart\" class=\"mtabletitlecss \"><th colspan=\"2\">Lazy Label</th><th>Progress</th><th>File Name</th><th># Files</th><th>Total</th></tr>";
@@ -375,51 +375,55 @@
 
 
         for (i = 0; i < equipmentNames.length; i++) {
-          if (!equipmentCommonData[i]["hidden"]) {
-            let statusItem = document.createElement("td");
-            statusItem.align = "center";
-            statusItem.innerHTML = equipmentCommonData[i]["status"];
-            if (equipmentCommonData[i]["status"].length < 1) {
-              statusItem.className = "mgreencolour greenLight";
-            } else if (equipmentCommonData[i]["status color"].indexOf("Light") != -1) {
-              statusItem.className = equipmentCommonData[i]["status"];
-            } else {
-              statusItem.className = "Light";
-              statusItem.style = "background-color:" + equipmentCommonData[i]["status color"] + ";";
-            }
+          let statusItem = document.createElement("td");
+          statusItem.align = "center";
+          statusItem.innerHTML = equipmentCommonData[i]["status"];
+          if (equipmentCommonData[i]["status"].length < 1) {
+            statusItem.className = "mgreencolour greenLight";
+          } else if (equipmentCommonData[i]["status color"].indexOf("Light") != -1) {
+            statusItem.className = equipmentCommonData[i]["status"];
+          } else {
+            statusItem.className = "Light";
+            statusItem.style = "background-color:" + equipmentCommonData[i]["status color"] + ";";
+          }
 
 
-            let eventsNum = equipmentStatData[i]["events sent"];
-            if (equipmentStatData[i]["events sent"] > 1E9) {
-              eventsNum = (equipmentStatData[i]["events sent"] / 1E9).toFixed(3) + "G";
-            } else if (equipmentStatData[i]["events sent"] > 1E6) {
-              eventsNum = (equipmentStatData[i]["events sent"] / 1E6).toFixed(3) + "M";
-            }
+          let eventsNum = equipmentStatData[i]["events sent"];
+          if (equipmentStatData[i]["events sent"] > 1E9) {
+            eventsNum = (equipmentStatData[i]["events sent"] / 1E9).toFixed(3) + "G";
+          } else if (equipmentStatData[i]["events sent"] > 1E6) {
+            eventsNum = (equipmentStatData[i]["events sent"] / 1E6).toFixed(3) + "M";
+          }
 
-            let equipmentRow = document.createElement("tr");
-            equipmentRow.id = equipmentNames[i] + "equipment";
-            equipmentRow.className = "equipmentRow mtablecss";
-            equipmentRow.innerHTML = "<td align=\"center\"><a href='/Equipment/" +
-              equipmentNames[i] +
-              "/Variables'>" +
-              equipmentNames[i] +
-              "</a></td>" +
-              statusItem.outerHTML +
-              "<td align=\"center\">" +
-              eventsNum +
-              "</td>" +
-              "<td align=\"center\">" +
-              equipmentStatData[i]["events per sec."].toFixed(1) +
-              "</td>" +
-              "<td align=\"center\">" +
-              equipmentStatData[i]["kbytes per sec."].toFixed(3) +
-              "</td>";
-            if (document.getElementById(equipmentNames[i] + "equipment") === null) {
-              document.getElementById("equipmentList").appendChild(equipmentRow);
-            } else {
-              if (document.getElementById(equipmentNames[i] + "equipment").innerHTML != equipmentRow.innerHTML) {
-                document.getElementById(equipmentNames[i] + "equipment").innerHTML = equipmentRow.innerHTML;
-              }
+          let equipmentRow = document.createElement("tr");
+          equipmentRow.id = equipmentNames[i] + "equipment";
+          equipmentRow.className = "equipmentRow mtablecss";
+          if (equipmentCommonData[i]["hidden"]) {
+            equipmentRow.style = "display:none";
+            equipmentRow.className += " hiddenEquip";
+          } else {
+            equipmentRow.style = "display:table-row";
+          }
+          equipmentRow.innerHTML = "<td align=\"center\"><a href='/SC/" +
+            equipmentNames[i] +
+            "'>" +
+            equipmentNames[i] +
+            "</a></td>" +
+            statusItem.outerHTML +
+            "<td align=\"center\">" +
+            eventsNum +
+            "</td>" +
+            "<td align=\"center\">" +
+            equipmentStatData[i]["events per sec."].toFixed(1) +
+            "</td>" +
+            "<td align=\"center\">" +
+            equipmentStatData[i]["kbytes per sec."].toFixed(3) +
+            "</td>";
+          if (document.getElementById(equipmentNames[i] + "equipment") === null) {
+            document.getElementById("equipmentList").appendChild(equipmentRow);
+          } else {
+            if (document.getElementById(equipmentNames[i] + "equipment").innerHTML != equipmentRow.innerHTML) {
+              document.getElementById(equipmentNames[i] + "equipment").innerHTML = equipmentRow.innerHTML;
             }
           }
         }
@@ -637,6 +641,29 @@
 
       generateClientsTable();
 
+    }
+
+
+    function hideEquipments() {
+      if (document.getElementsByClassName("hiddenEquip") != null) {
+        Array.prototype.forEach.call(document.getElementsByClassName("hiddenEquip"), function (element) {
+          element.style = "display:none";
+        });
+      }
+      let hideButton = document.getElementById("hide");
+      hideButton.href = 'javascript:unhideEquipments()';
+      hideButton.innerText = '+';
+    }
+
+    function unhideEquipments() {
+      if (document.getElementsByClassName("hiddenEquip") != null) {
+        Array.prototype.forEach.call(document.getElementsByClassName("hiddenEquip"), function (element) {
+          element.style = "display:table-row";
+        });
+      }
+      let hideButton = document.getElementById("hide");
+      hideButton.href = 'javascript:hideEquipments()';
+      hideButton.innerText = '-';
     }
 
 
