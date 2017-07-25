@@ -408,6 +408,165 @@ ODBGetAlarms(); ---- use mjsonrpc_call("get_alarms")
 
         <hr>
 
+        <h2>History functions</h2>
+
+        <h2>hs_get_active_events (hs_read_event_list)</h2>
+        
+        <p>
+          <div>
+            <input type=button value='Get list of active history events'
+              onClick='mjsonrpc_call("hs_get_active_events")
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_active_events_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_get_active_events_data">
+            list of active history events goes here
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get list of history channels'
+              onClick='mjsonrpc_call("hs_get_channels")
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_channels_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_get_channels_data">
+            list of logger history channels
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Reopen the history database'
+              onClick='mjsonrpc_call("hs_reopen")
+                   .then(function(rpc) {
+                   document.getElementById("hs_reopen_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_reopen_data">
+            result of hs_reopen
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get list of history events'
+              onClick='mjsonrpc_call("hs_get_events")
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_events_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_get_events_data">
+            list of history events goes here
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get list of history events from MIDAS channel'
+              onClick='mjsonrpc_call("hs_get_events",{"channel":"MIDAS"})
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_events_data_midas").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_get_events_data_midas">
+            list of history events goes here, channel MIDAS
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get list of history tags'
+              onClick='mjsonrpc_call("hs_get_tags",{"events":["fetest","slow/SLOW","nonexistant"]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_tags_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_get_tags_data">
+            list of history tags goes here
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get list of history last-written'
+              onClick='mjsonrpc_call("hs_get_last_written",{"events":["Run transitions","fetest","fetest/EPS","slow/SLOW"],"tags":["State","EPS","EPS","SLOW"],"index":[0,0,0,0]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_get_last_written_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_get_last_written_data">
+            list of history last-written goes here
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get history data'
+              onClick='var t=Date.now()/1000;mjsonrpc_call("hs_read",{"start_time":t-10*60,"end_time":t,"events":["Run transitions","fetest","fetest/EPS","slow/SLOW"],"tags":["State","EPS","EPS","SLOW"],"index":[0,0,0,0]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_read_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_read_data">
+            history data
+          </div>
+        </p>
+
+        <p>
+          <div>
+            <input type=button value='Get binned history data'
+              onClick='var t=Date.now()/1000;mjsonrpc_call("hs_read_binned",{"start_time":t-1*60,"end_time":t,"num_bins":10,"events":["Run transitions","fetest","fetest/EPS","slow/SLOW"],"tags":["State","EPS","EPS","SLOW"],"index":[0,0,0,0]})
+                   .then(function(rpc) {
+                   document.getElementById("hs_read_binned_data").innerHTML = JSON.stringify(rpc.result);
+                   //mjsonrpc_debug_alert(rpc);
+                   })
+                   .catch(function(error) {
+                   mjsonrpc_error_alert(error);
+                   });'></input>
+          </div>
+          <div id="hs_read_binned_data">
+            binned history data
+          </div>
+        </p>
+
+        <hr>
+
         <h2>Inline editor functions</h2>
 
         <h2>ODBEdit()</h2>
@@ -497,11 +656,18 @@ ODBGetAlarms(); ---- use mjsonrpc_call("get_alarms")
           <input type=button value='set debug 0' onClick='mjsonrpc_call("set_debug", "0").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='set debug 1' onClick='mjsonrpc_call("set_debug", "1").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='get debug' onClick='mjsonrpc_call("get_debug", "{}").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='set sleep 0' onClick='mjsonrpc_call("set_sleep", "0").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='set sleep 1' onClick='mjsonrpc_call("set_sleep", "1").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='set sleep 2' onClick='mjsonrpc_call("set_sleep", "2").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='set sleep 5' onClick='mjsonrpc_call("set_sleep", "5").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='set sleep 999 (timeout)' onClick='mjsonrpc_call("set_sleep", "999").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='get sleep' onClick='mjsonrpc_call("get_sleep").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test echo request' onClick='mjsonrpc_call("echo", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test error request' onClick='mjsonrpc_call("error", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
         </p>
         
         <p> Test error responses:
+          <input type=button value='test response to a non json-rpc request' onClick='mjsonrpc_send_request("\"this is not a json-rpc request\"").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test unknown method request' onClick='mjsonrpc_call("test call of unknown method", ["some params"]) .then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test missing parameters' onClick='mjsonrpc_call("test call with missing parameters").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test invalid request' onClick='mjsonrpc_call("echo", function(){ ; }).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
@@ -510,6 +676,12 @@ ODBGetAlarms(); ---- use mjsonrpc_call("get_alarms")
           <input type=button value='test request with null response' onClick='mjsonrpc_call("null", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test db_create array check' onClick='mjsonrpc_db_create({"this is not an array":0}).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
           <input type=button value='test db_copy array check' onClick='mjsonrpc_db_copy("this is not an array").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+        </p>
+        <p> Test batch requests:
+          <input type=button value='test empty batch request' onClick='mjsonrpc_send_request([]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='test 1 element batch request' onClick='mjsonrpc_send_request([mjsonrpc_make_request("db_copy",{"paths":["/runinfo"]})]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='test 2 element batch request' onClick='mjsonrpc_send_request([mjsonrpc_make_request("db_copy",{"paths":["/runinfo"]}),mjsonrpc_make_request("db_key",{"paths":["/runinfo"]})]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
+          <input type=button value='test 3 element batch request with one bad request' onClick='mjsonrpc_send_request([mjsonrpc_make_request("db_copy",{"paths":["/runinfo"]}),mjsonrpc_make_request("this_method_does_not_exist"),mjsonrpc_make_request("db_key",{"paths":["/runinfo"]})]).then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>
         </p>
         <p> Test examples from mjsonrpc_user.cxx
           <input type=button value='user example1 with wrong arguments' onClick='mjsonrpc_call("user_example1", "[ 1 ]").then(function(rpc){mjsonrpc_debug_alert(rpc);}).catch(function(error){mjsonrpc_error_alert(error);});'></input>

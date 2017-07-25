@@ -697,6 +697,31 @@ std::string MJsonNode::Encode(const char* s)
    return v;
 }
 
+std::string MJsonNode::EncodeInt(int intvalue)
+{
+   char buf[256];
+   sprintf(buf, "%d", intvalue);
+   return buf;
+}
+
+std::string MJsonNode::EncodeDouble(double numbervalue)
+{
+   if (isfinite(numbervalue)) {
+      char buf[256];
+      sprintf(buf, "%.16e", numbervalue);
+      return buf;
+   } else if (isnan(numbervalue)) {
+      return "\"NaN\"";
+   } else if (isinf(numbervalue)) {
+      if (numbervalue > 0)
+         return "\"Infinity\"";
+      else
+         return "\"-Infinity\"";
+   } else {
+      assert(!"this cannot happen!");
+   }
+}
+
 std::string MJsonNode::Stringify(int flags) const
 {
    switch (type) {
@@ -728,25 +753,10 @@ std::string MJsonNode::Stringify(int flags) const
       return std::string("\"") + Encode(stringvalue.c_str()) + "\"";
    }
    case MJSON_INT: {
-      char buf[256];
-      sprintf(buf, "%d", intvalue);
-      return buf;
+      return EncodeInt(intvalue);
    }
    case MJSON_NUMBER: {
-      if (isfinite(numbervalue)) {
-         char buf[256];
-         sprintf(buf, "%.16e", numbervalue);
-         return buf;
-      } else if (isnan(numbervalue)) {
-         return "\"NaN\"";
-      } else if (isinf(numbervalue)) {
-         if (numbervalue > 0)
-            return "\"Infinity\"";
-         else
-            return "\"-Infinity\"";
-      } else {
-         assert(!"this cannot happen!");
-      }
+      return EncodeDouble(numbervalue);
    }
    case MJSON_BOOL:
       if (intvalue)
@@ -1050,6 +1060,17 @@ void MJsonNode::Dump(int nest) const // debug
       }
       break;
    }
+}
+
+MJsonNode* MJsonNode::Copy() const
+{
+   MJsonNode* n = new MJsonNode(*this);
+   assert(n->objectnames.size() == objectnames.size());
+   assert(n->subnodes.size() == subnodes.size());
+   for (unsigned i=0; i<n->subnodes.size(); i++) {
+      n->subnodes[i] = subnodes[i]->Copy();
+   }
+   return n;
 }
 
 /* emacs

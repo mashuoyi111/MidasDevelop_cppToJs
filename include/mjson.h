@@ -49,6 +49,8 @@ class MJsonNode {
 
  public: // string encoder
    static std::string Encode(const char* s);
+   static std::string EncodeInt(int v);
+   static std::string EncodeDouble(double v);
    
  public: // public factory constructors
    static MJsonNode* MakeArray();
@@ -83,9 +85,15 @@ class MJsonNode {
  public: // public helper and debug methods
    static const char* TypeToString(int type); /// return node type as string
    void Dump(int nest = 0) const; /// dump the subtree to standard output
+   MJsonNode* Copy() const; /// make a copy of the json tree
 
  protected:
    MJsonNode(int type); // protected constructor for subclassing
+
+ private:
+   //MJsonNode(); // constructor not permitted
+   //MJsonNode(const MJsonNode&); // copy by copy-constructor not permitted, use Copy() method
+   MJsonNode& operator=(const MJsonNode&); // copy by assignement not permitted, use Copy() method
 };
 
 #endif

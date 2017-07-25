@@ -1168,7 +1168,7 @@ int Mysql::Prepare(const char* table_name, const char* sql)
 
 int Mysql::Step()
 {
-   if (0 && fDebug)
+   if (/* DISABLES CODE */ (0) && fDebug)
       printf("Mysql::Step()\n");
 
    assert(fMysql);
@@ -1232,7 +1232,7 @@ const char* Mysql::ColumnType(int midas_tid)
 
 bool Mysql::TypesCompatible(int midas_tid, const char* sql_type)
 {
-   if (0)
+   if (/* DISABLES CODE */ (0))
       printf("compare types midas \'%s\'=\'%s\' and sql \'%s\'\n", rpc_tid_name(midas_tid), ColumnType(midas_tid), sql_type);
 
    //if (sql2midasType_mysql(sql_type) == midas_tid)
@@ -1259,7 +1259,7 @@ bool Mysql::TypesCompatible(int midas_tid, const char* sql_type)
    //if (midas_tid==TID_DWORD && strcmp(sql_type, "int(10) unsigned")==0)
    //   return true;
 
-   if (0)
+   if (/* DISABLES CODE */ (0))
       printf("type mismatch!\n");
 
    return false;
@@ -2436,6 +2436,7 @@ public:
             fSum2[i] = 0;
          }
 
+         fCount = NULL;
          fMean = NULL;
          fRms = NULL;
          fMin = NULL;
@@ -2469,7 +2470,7 @@ public:
          if (ibin < 0)
             ibin = 0;
          else if (ibin >= fNumBins)
-            ibin = fNumBins;
+            ibin = fNumBins-1;
 
          if (fSum0[ibin] == 0) {
             if (fMin)
@@ -2506,8 +2507,12 @@ public:
       {
          for (int i=0; i<fNumBins; i++) {
             double num = fSum0[i];
-            double mean = fSum1[i]/num;
-            double variance = fSum2[i]/num-mean*mean;
+            double mean = 0;
+            double variance = 0;
+            if (num > 0) {
+               mean = fSum1[i]/num;
+               variance = fSum2[i]/num-mean*mean;
+            }
             double rms = 0;
             if (variance > 0)
                rms = sqrt(variance);
@@ -2520,6 +2525,13 @@ public:
 
             if (fRms)
                fRms[i] = rms;
+
+            if (num == 0) {
+               if (fMin)
+                  fMin[i] = 0;
+               if (fMax)
+                  fMax[i] = 0;
+            }
          }
       }
    };
@@ -2693,7 +2705,7 @@ int SchemaHistoryBase::hs_flush_buffers()
 int SchemaHistoryBase::hs_clear_cache()
 {
    if (fDebug)
-      printf("hs_clear_cache!\n");
+      printf("SchemaHistoryBase::hs_clear_cache!\n");
 
    fWriterCurrentSchema.clear();
    fSchema.clear();
@@ -3044,6 +3056,8 @@ int SchemaHistoryBase::hs_read_binned(time_t start_time, time_t end_time, int nu
 
    for (int i=0; i<num_var; i++) {
       buffer[i]->Finish();
+      if (num_entries)
+         num_entries[i] = buffer[i]->fNumEntries;
       delete buffer[i];
    }
 
@@ -4737,6 +4751,7 @@ public:
 
    int hs_connect(const char* connect_string);
    int hs_disconnect();
+   int hs_clear_cache();
    int read_schema(HsSchemaVector* sv, const char* event_name, const time_t timestamp);
    HsSchema* new_event(const char* event_name, time_t timestamp, int ntags, const TAG tags[]);
 
@@ -4764,10 +4779,18 @@ int FileHistory::hs_connect(const char* connect_string)
    return HS_SUCCESS;
 }
 
+int FileHistory::hs_clear_cache()
+{
+   if (fDebug)
+      printf("FileHistory::hs_clear_cache!\n");
+   fPathLastMtime = 0;
+   return SchemaHistoryBase::hs_clear_cache();
+}
+
 int FileHistory::hs_disconnect()
 {
    if (fDebug)
-      printf("hs_disconnect!\n");
+      printf("FileHistory::hs_disconnect!\n");
 
    hs_flush_buffers();
    hs_clear_cache();
