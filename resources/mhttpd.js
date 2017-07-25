@@ -424,12 +424,8 @@ function mhttpd_init(current_page, interval) {
          "<div style=\"display:inline;\" id=\"mheader_message\">&nbsp;</div>" +
 
          "<div style=\"display:inline; float:right;\">" +
-         "<span style=\"display:inline; font-size: 75%;\" id=\"mheader_last_updated\"></span>" +
-         "<span style=\"display:inline;\" id=\"mheader_help\">" +
-         "<a href=\"?cmd=Help\">Help</a>" +
-         "</span>" +
+         "<span style=\"display:inline; font-size: 75%; margin-right: 10px\" id=\"mheader_last_updated\"></span>" +
          "</div>";
-
 
    // update header and menu
    if (document.getElementById("msidenav") != undefined) {
@@ -489,11 +485,11 @@ function mhttpd_init(current_page, interval) {
             if (bb == current_page) {
                cc += " mmenuitemsel";
             }
-            html += "<div class=\"" + cc + "\" onclick=\"window.location.href=\'" + "?cmd=" + bb + "\';\">" + bb + "</div>\n";
+            html += "<div class=\"" + cc + "\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.location.href=\'" + "?cmd=" + bb + "\';return false;\">" + bb + "</a></div>\n";
          }
 
          // custom
-         if (Object.keys(custom).length > 0) {
+         if (custom !== null && Object.keys(custom).length > 0) {
             // add separator
             html += "<div class=\"mseparator\"></div>\n";
 
@@ -505,13 +501,13 @@ function mhttpd_init(current_page, interval) {
                   cc += " mmenuitemsel";
                if (b == "path")
                   continue;
-               html += "<div class=\"" + cc + "\" onclick=\"window.location.href=\'" + custom[b] + "\';\">" + custom[b + "/name"] + "</div>\n";
+               html += "<div class=\"" + cc + "\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.location.href=\'" + custom[b] + "\';return false;\">" + custom[b + "/name"] + "</a></div>\n";
             }
 
          }
 
          // alias
-         if (Object.keys(alias).length > 0) {
+         if (alias !== null && Object.keys(alias).length > 0) {
             // add separator
             html += "<div class=\"mseparator\"></div>\n";
 
@@ -521,9 +517,9 @@ function mhttpd_init(current_page, interval) {
                var n = alias[b + "/name"];
                if (n.substr(n.length - 1) === "&") {
                   n = n.substr(0, n.length - 1);
-                  html += "<div class=\"mmenuitem\" onclick=\"window.open(\'" + alias[b] + "\');\">" + n + "&#8599;</div>\n";
+                  html += "<div class=\"mmenuitem\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.open(\'" + alias[b] + "\');return false;\">" + n + "&#8599;</a></div>\n";
                } else {
-                  html += "<div class=\"mmenuitem\" onclick=\"window.location.href=\'" + alias[b] + "\';\">" + n + "&#8599;</div>\n";
+                  html += "<div class=\"mmenuitem\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.location.href=\'" + alias[b] + "\';return false;\">" + n + "&#8599;</a></div>\n";
                }
             }
 

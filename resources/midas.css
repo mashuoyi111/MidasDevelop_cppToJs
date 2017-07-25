@@ -62,19 +62,6 @@ a:focus { color:#0000FF; text-decoration:underline }
    line-height: 1;
 }
 
-#mheader_help {
-   margin-left: 1em;
-   margin-right: 20px; /* compensate for padding above */
-}
-
-#mheader_help a:link {
-   color: #e3a213;
-}
-
-#mheader_help a:visited {
-   color: #e3a213;
-}
-
 #msidenav {
    height:100%;
    position:fixed;
@@ -97,8 +84,17 @@ a:focus { color:#0000FF; text-decoration:underline }
 
 .mmenuitem:hover, .mmenuitem:focus {
    background-color: #808080;
-   color: #E0E0E0;
+   color: #404040;
    cursor: pointer;
+}
+
+.mmenulink:hover, .mmenulink:focus {
+   text-decoration: none;
+}
+
+.mmenulink:link, .mmenulink:visited {
+   text-decoration: none;
+   color: #404040;
 }
 
 .mmenuitemsel {
@@ -140,9 +136,9 @@ a:focus { color:#0000FF; text-decoration:underline }
    padding: 1em;
 }
 
-.hideButton{
+a.hideButton{
     text-decoration : none; 
-    color : #696969;
+    color : #5F88A3;
 }
 
 /* all navigation buttons */
@@ -261,6 +257,17 @@ div.mpush{
    font-size: 100%;
    text-align: center;
    padding: 1em;
+}
+
+.mmaintable {
+   background-color: #F5F5F5;
+   border: 2px solid #6bb28c;
+   border-radius: 12px;
+   margin-left: auto;
+   margin-right: auto;
+   margin-top: 0.5em;
+   margin-bottom: 0.5em;
+   padding: 3px;
 }
 
 /* end */
