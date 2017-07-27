@@ -414,7 +414,7 @@ function mhttpd_init(current_page, interval) {
 
    // create header
    var h = document.getElementById("mheader");
-   if (h != undefined)
+   if (h !== undefined)
       h.innerHTML =
          "<div style=\"display:inline-block; float:left\";>" +
          "<span class=\"mmenuitem\" style=\"padding-right: 10px;margin-right: 20px;\" onclick=\"mhttpd_toggle_menu()\">&#9776;</span>" +
@@ -428,16 +428,16 @@ function mhttpd_init(current_page, interval) {
          "</div>";
 
    // update header and menu
-   if (document.getElementById("msidenav") != undefined) {
+   if (document.getElementById("msidenav") !== undefined) {
 
       // get it from session storage cache if present
-      if (sessionStorage.msidenav != undefined && sessionStorage.mexpname != undefined) {
+      if (sessionStorage.msidenav !== undefined && sessionStorage.mexpname !== undefined) {
          var menu = document.getElementById("msidenav");
          menu.innerHTML = sessionStorage.msidenav;
          var item = menu.children;
          for (var i = 0; i < item.length; i++) {
             if (item[i].className !== "mseparator") {
-               if (item[i].innerHTML == current_page)
+               if (item[i].innerHTML === current_page)
                   item[i].className = "mmenuitem mmenuitemsel";
                else
                   item[i].className = "mmenuitem";
@@ -445,21 +445,37 @@ function mhttpd_init(current_page, interval) {
          }
          document.getElementById("mheader_expt_name").innerHTML = sessionStorage.mexpname;
          document.getElementById("mheader_last_updated").innerHTML = new Date();
+
+         // now the side navigation has its full width, ajust the main body and make it visible
+         var m = document.getElementById("mmain");
+         if (m !== undefined) {
+            m.style.marginLeft = document.getElementById("msidenav").clientWidth + "px";
+            m.style.display = "block";
+         }
       }
 
       // request it from server, since it might have changed
-      mjsonrpc_db_get_values(["/Experiment/Name", "/Experiment/Menu", "/Experiment/Menu Buttons",
+      mjsonrpc_db_get_values(["/Experiment/Base URL", "/Experiment/Name", "/Experiment/Menu", "/Experiment/Menu Buttons",
          "/Custom", "/Scripts", "/Alias"]).then(function (rpc) {
-         document.getElementById("mheader_expt_name").innerHTML = rpc.result.data[0];
-         sessionStorage.setItem("mexpname", rpc.result.data[0]);
+         document.getElementById("mheader_expt_name").innerHTML = rpc.result.data[1];
+         sessionStorage.setItem("mexpname", rpc.result.data[1]);
 
          document.getElementById("mheader_last_updated").innerHTML = new Date();
 
-         var menu = rpc.result.data[1];
-         var buttons = rpc.result.data[2];
-         var custom = rpc.result.data[3];
-         var scripts = rpc.result.data[4];
-         var alias = rpc.result.data[5];
+         var base_url = rpc.result.data[0];
+         var menu = rpc.result.data[2];
+         var buttons = rpc.result.data[3];
+         var custom = rpc.result.data[4];
+         var scripts = rpc.result.data[5];
+         var alias = rpc.result.data[6];
+
+         // check for base URL
+         if (base_url === null) {
+            base_url = "http://localhost:8080";
+            alert("\"/Experiment/Base URL\" is missing in ODB, please define it.")
+         }
+         if (base_url.slice(-1) !== "/")
+            base_url += "/";
 
          // menu buttons
          var b = [];
@@ -485,7 +501,7 @@ function mhttpd_init(current_page, interval) {
             if (bb == current_page) {
                cc += " mmenuitemsel";
             }
-            html += "<div class=\"" + cc + "\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.location.href=\'" + "?cmd=" + bb + "\';return false;\">" + bb + "</a></div>\n";
+            html += "<div class=\"" + cc + "\"><a href=\""+ bb + "\" class=\"mmenulink\" onclick=\"window.location.href=\'" + base_url + "?cmd=" + bb + "\';return false;\">" + bb + "</a></div>\n";
          }
 
          // custom
@@ -501,7 +517,7 @@ function mhttpd_init(current_page, interval) {
                   cc += " mmenuitemsel";
                if (b == "path")
                   continue;
-               html += "<div class=\"" + cc + "\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.location.href=\'" + custom[b] + "\';return false;\">" + custom[b + "/name"] + "</a></div>\n";
+               html += "<div class=\"" + cc + "\"><a href=\""+ custom[b] + "\" class=\"mmenulink\" onclick=\"window.location.href=\'" + base_url + custom[b] + "\';return false;\">" + custom[b + "/name"] + "</a></div>\n";
             }
 
          }
@@ -517,9 +533,9 @@ function mhttpd_init(current_page, interval) {
                var n = alias[b + "/name"];
                if (n.substr(n.length - 1) === "&") {
                   n = n.substr(0, n.length - 1);
-                  html += "<div class=\"mmenuitem\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.open(\'" + alias[b] + "\');return false;\">" + n + "&#8599;</a></div>\n";
+                  html += "<div class=\"mmenuitem\"><a href=\""+ alias[b] + "\" class=\"mmenulink\" onclick=\"window.open(\'" + alias[b] + "\');return false;\">" + n + "&#8599;</a></div>\n";
                } else {
-                  html += "<div class=\"mmenuitem\"><a href=\"#\" class=\"mmenulink\" onclick=\"window.location.href=\'" + alias[b] + "\';return false;\">" + n + "&#8599;</a></div>\n";
+                  html += "<div class=\"mmenuitem\"><a href=\""+ alias[b] + "\" class=\"mmenulink\" onclick=\"window.location.href=\'" + alias[b] + "\';return false;\">" + n + "&#8599;</a></div>\n";
                }
             }
 
@@ -527,12 +543,11 @@ function mhttpd_init(current_page, interval) {
 
          document.getElementById("msidenav").innerHTML = html;
 
-         // adjust size of mmain element
+         // re-adjust size of mmain element if menu has changed
          var m = document.getElementById("mmain");
-         if (m != undefined) {
+         if (m !== undefined) {
             m.style.marginLeft = document.getElementById("msidenav").clientWidth + "px";
             m.style.display = "block";
-            m.style.transition = "0.3s";
          }
 
          // cache navigation buttons in browser local storage
@@ -587,6 +602,8 @@ function mhttpd_init(current_page, interval) {
    }
 
    // store refresh interval and do initial refresh
+   if (interval === undefined)
+      interval = 1000;
    mhttpd_refresh_interval = interval;
    mhttpd_refresh();
 }

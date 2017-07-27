@@ -11,14 +11,9 @@
    <title>status</title>
 </head>
 
-<body class="mcss">
+<body class="mcss" onload="mhttpd_init('Status')">
 
 
-
-
-   <script>
-      window.addEventListener("load", mhttpd_init.bind(null, 'Status'), false);
-   </script>
 
    <div id="mheader"></div>
    <div id="msidenav"></div>
@@ -33,7 +28,7 @@
       </tr>
     </table>-->
 
-   <div id="mmain" class="mmain">
+   <div id="mmain">
       <table class="mmaintable" id="statusTable" style="display:none">
 
 
@@ -67,13 +62,6 @@
                   <tr>
                      <td colspan="6">
                         <table id="runStatusExperimentItems" class="genericStripe" width="100%">
-
-                           <tr>
-                              <td style="text-align:left;" width="30%" class="titleCell"> Experiment Name: </td>
-                              <td id="runStatusExperimentName" style="text-align:left;"> runStatusExperimentName </td>
-                           </tr>
-
-
 
                         </table>
                      </td>
@@ -127,7 +115,8 @@
          <tr>
             <td colspan="6">
 
-               <table class="mtable" id="clientsTable" width="100%">
+               <table class="mtable clientsTable" id="clientsTable" width="100%">
+
                   <tr>
                      <th colspan="6" class="mtableheader">Clients</th>
                   </tr>
@@ -170,7 +159,7 @@
          var sequencerJson = rpc.data[4];
          var loggerJson = rpc.data[5];
          var LazyJson = rpc.data[6];
-         //var equipmentJson = rpc.data[1];
+         var experimentName = rpc.data[7];
 
          var currentClientList = new Array();
 
@@ -265,7 +254,7 @@
                         "<br>" +
                         state +
                         "<br>" +
-                        "<input type='button' value='" + buttonText + "' onclick='mhttpd_start_run()'>";
+                        "<input type='button' class='mbutton' value='" + buttonText + "' onclick='mhttpd_start_run()'>";
                   } else if (state == "Running") {
                      document.getElementById("runNumberCell").innerHTML = "Run" +
                         "<br>" +
@@ -273,7 +262,7 @@
                         "<br>" +
                         state +
                         "<br>" +
-                        "<input type='button' value='" + buttonText + "' onclick='mhttpd_stop_run()'>";
+                        "<input type='button' class='mbutton' value='" + buttonText + "' onclick='mhttpd_stop_run()'>";
                   }
                }
 
@@ -287,14 +276,14 @@
 
 
 
-                  if (document.getElementById("runStatusExperimentName").innerHTML != experimentItemsJson["experiment name"]) {
-                     document.getElementById("runStatusExperimentName").innerHTML = experimentItemsJson["experiment name"];
-                  }
+                  //if (document.getElementById("runStatusExperimentName").innerHTML != experimentName) {
+                  //   document.getElementById("runStatusExperimentName").innerHTML = experimentName;
+                  //}
                   // check if lazy active is in the experiment items list
 
                   var experimentItemList = Object.keys(experimentItemsJson);
                   if (experimentItemList.length > 3) {
-                     for (var i = 3; i < experimentItemList.length; i = i + 3) {
+                     for (var i = 0; i < experimentItemList.length; i = i + 3) {
 
                         var experimentItem = document.createElement("tr");
                         experimentItem.id = experimentItemList[i + 2] + "ExperimentItem";
@@ -627,8 +616,8 @@
 
          // set title
          if (experimentItemsJson) {
-            if (experimentItemsJson.hasOwnProperty("experiment name") && (document.title != experimentItemsJson["experiment name"] + " status")) {
-               document.title = experimentItemsJson["experiment name"] + " status";
+            if (document.title != experimentName + " status") {
+               document.title = experimentName + " status";
             }
          }
 
@@ -638,11 +627,14 @@
          //call generate functions
          generateRunStatus();
 
-         generateEquipmentTable();
+         if (equipmentNames != null)
+            generateEquipmentTable();
 
-         generateLogChannel();
+         if (logChannelJson != null)
+            generateLogChannel();
 
-         generateClientsTable();
+         if (clientsJson != null)
+            generateClientsTable();
 
          document.getElementById('mheader_last_updated').innerText = new Date;
 
@@ -676,24 +668,27 @@
       function update() {
          //update time
 
-         var paths = ["/Experiment/Status items", "/Logger/Channels", "/System/Clients", "/Runinfo", "Sequencer/State", "/Logger", "/Lazy"];
+         var paths = ["/Experiment/Status items", "/Logger/Channels", "/System/Clients", "/Runinfo", "Sequencer/State", "/Logger", "/Lazy", "/Experiment/Name"];
 
 
 
          mjsonrpc_db_ls(["Equipment"]).then(function (equipmentListData) {
-
             //get all equipment names into an Array
-            var equipmentList = Object.keys(equipmentListData.result.data[0]);
+            if (equipmentListData.result.data[0] != null) {
+               var equipmentList = Object.keys(equipmentListData.result.data[0]);
+               //push all equipment names into an Array of Promises
+               var equipmentStatList = equipmentList.map(function (element) {
+                  return "/Equipment/" + element + "/statistics";
+               });
 
-            //push all equipment names into an Array of Promises
-            var equipmentStatList = equipmentList.map(function (element) {
-               return "/Equipment/" + element + "/statistics";
-            });
-
-            var equipmentCommonList = equipmentList.map(function (element) {
-               return "/Equipment/" + element + "/common";
-            });
-
+               var equipmentCommonList = equipmentList.map(function (element) {
+                  return "/Equipment/" + element + "/common";
+               });
+            } else {
+               var equipmentList = null;
+               var equipmentStatList = [];
+               var equipmentCommonList = [];
+            }
 
             mjsonrpc_send_request([
                mjsonrpc_make_request("db_get_values", { "paths": paths }),
@@ -703,6 +698,7 @@
                mjsonrpc_make_request("db_get_values", { "paths": equipmentStatList }),
                mjsonrpc_make_request("db_get_values", { "paths": equipmentCommonList })
             ]).then(function (rpc) {
+
                callback(rpc[0]["result"], rpc[1]["result"], rpc[2]["result"], rpc[3]["result"], equipmentList, rpc[4]["result"]["data"], rpc[5]["result"]["data"]);
             }).then(function (x) {
                // show the page only after all contents are loaded
