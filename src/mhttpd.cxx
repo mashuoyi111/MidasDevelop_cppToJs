@@ -8918,8 +8918,6 @@ void show_mscb_page(Param* p, Return* r, const char* dec_path, const char *path,
 
    /*---- main content ----*/
 
-   r->rsprintf("<div id=\"mmain\">\n");
-
    r->rsprintf("<table class=\"mtable\">");  //main table
    r->rsprintf("<tr><th class=\"mtableheader\" colspan=2>MSCB</th><tr>");
    
@@ -9475,7 +9473,7 @@ void show_odb_page(Param* pp, Return* r, char *enc_path, int enc_path_size, char
    colspan = 7;
 
    if (elog_mode) {
-      r->rsprintf("<table class=\"headerTable\">\n");
+      r->rsprintf("<table class=\"mtableheader\">\n");
       r->rsprintf("<tr><td colspan=%d>\n", colspan);
       r->rsprintf("<input type=button value=ELog onclick=\"self.location=\'?cmd=Alarms\';\">\n");
       r->rsprintf("</td></tr></table>\n\n");
@@ -9484,8 +9482,8 @@ void show_odb_page(Param* pp, Return* r, char *enc_path, int enc_path_size, char
 
    /*---- begin ODB directory table ----*/
 
-   r->rsprintf("<table class=\"ODBtable\" style=\"border-spacing:0px;\">\n");
-   r->rsprintf("<tr><th colspan=%d class=\"subStatusTitle\">Online Database Browser</tr>\n", colspan);
+   r->rsprintf("<table class=\"mtable\" style=\"border-spacing:0px;\">\n");
+   r->rsprintf("<tr><th colspan=%d class=\"mtableheader\">Online Database Browser</tr>\n", colspan);
    //buttons:
    if(!elog_mode){
       r->rsprintf("<tr><td colspan=%d>\n", colspan);
@@ -10735,7 +10733,7 @@ void show_programs_page()
    r->rsprintf("<input type=hidden name=cmd value=Programs>\n");
 
    /*---- programs ----*/
-   r->rsprintf("<table class=\"subStatusTable\" id=\"stripeList\"><tr><td colspan=5 class=\"subStatusTitle\">Programs</td></tr>");
+   r->rsprintf("<table class=\"mtable\" id=\"stripeList\"><tr><td colspan=5 class=\"subStatusTitle\">Programs</td></tr>");
    r->rsprintf("<tr class=\"titleRow\"><th>Program<th>Running on host<th>Alarm class<th>Autorestart</tr>\n");
 
    /* go through all programs */
@@ -13678,7 +13676,7 @@ void show_hist_config_page(Param* p, Return* r, const char* dec_path, const char
    show_header(r, "History Config", "GET", str, 0);
    r->rsprintf("</table>");  //close header table
 
-   r->rsprintf("<table class=\"historyConfigTable\">"); //open main table
+   r->rsprintf("<table class=\"mtable\">"); //open main table
 
    r->rsprintf("<tr><th colspan=8 class=\"subStatusTitle\">History Panel \"%s / %s\"</th></tr>\n", hgroup, panel);
 
@@ -14762,8 +14760,8 @@ void show_hist_page(Param* p, Return* r, const char *dec_path, const char* enc_p
    r->rsprintf("<script type=\"text/javascript\" src=\"mhttpd.js\"></script>\n");
    show_navigation_bar(r, "History");
 
-   r->rsprintf("<table class=\"genericTable\">");
-   r->rsprintf("<tr><th class=\"subStatusTitle\" colspan=2>History</th></tr>");
+   r->rsprintf("<table class=\"mtable\">");
+   r->rsprintf("<tr><th class=\"mtableheader\" colspan=2>History</th></tr>");
 
    {
       char str[MAX_ODB_PATH];
@@ -16809,7 +16807,7 @@ void show_seq_page(Param* p, Return* r, const char* dec_path)
                r->rsprintf("</script>");
             }
 
-            r->rsprintf("<table class=\"sequencerTable\" width=\"100%%\"><tr><th class=\"subStatusTitle\">Sequencer File</th></tr>");  //start file display table
+            r->rsprintf("<table class=\"mtable\" width=\"100%%\"><tr><th class=\"mtableheader\">Sequencer File</th></tr>");  //start file display table
             
             r->rsprintf("<tr><td colspan=2><table width=100%%><tr><td>Filename:<b>%s</b></td>", seq_filename());
             if (stristr(seq_filename(), ".msl"))
@@ -16955,7 +16953,7 @@ void show_seq_page(Param* p, Return* r, const char* dec_path)
 
          /*---- show messages ----*/
          if (seq_running()) {
-            r->rsprintf("<table class=\"sequencerTable\" width=100%%><tr><th class=\"subStatusTitle\">Messages</th></tr>");
+            r->rsprintf("<table class=\"mtable\" width=100%%><tr><th class=\"mtableheader\">Messages</th></tr>");
             r->rsprintf("<tr><td colspan=2>\n");
             r->rsprintf("<font id=\"sequencerMessages\" style=\"font-family:monospace\">\n");
             r->rsprintf("<a href=\"../?cmd=Messages\">...</a><br>\n");
@@ -18766,8 +18764,50 @@ static bool handle_decode_get(struct mg_connection *nc, const http_message* msg,
    rr->zero();
 
    // call midas
-   
-   decode_get(rr, NULL, cookie_pwd, cookie_wpwd, cookie_cpwd, refresh, expand, false, uri, query_string);
+
+   static const char* const allowed_files[] = {
+      "alarm.mp3",
+      "alarms.html",
+      "chat.html",
+      "controls.js",
+      "dialog.html",
+      "example.html",
+      "messages.html",
+      "mhttpd.css",
+      "mhttpd.js",
+      "midas.css",
+      "midas.js",
+      "obsolete.js",
+      "odb.html",
+      "programs.html",
+      "start.html",
+      "status.html",
+      "transition.html",
+      NULL
+   };
+
+   bool call_decode_get = true;
+
+   // remove leading slash
+   const char* xuri = uri;
+   while (xuri[0] == '/') {
+      xuri++;
+   }
+
+   for (const char* const* s = allowed_files; *s != NULL; s++) {
+      if (strcmp(xuri, *s) == 0) {
+         if (trace_mg||verbose_mg) {
+            printf("handle_decode_get: uri [%s], query [%s], sending resource [%s]\n", uri, query_string, *s);
+         }
+         send_resource(rr, *s);
+         call_decode_get = false;
+         break;
+      }
+   }
+
+   if (call_decode_get) {
+      decode_get(rr, NULL, cookie_pwd, cookie_wpwd, cookie_cpwd, refresh, expand, false, uri, query_string);
+   }
 
    if (trace_mg)
       printf("handle_decode_get: return buffer length %d bytes, strlen %d\n", rr->return_length, (int)strlen(rr->return_buffer));

@@ -29,7 +29,7 @@
     </table>-->
 
    <div id="mmain">
-      <table class="mmaintable" id="statusTable" style="display:none">
+      <table class="mmaintable" id="statusTable">
 
 
 
@@ -270,9 +270,7 @@
                   document.getElementById("runStatusStartTime").innerHTML = "Start: " + runinfoJson["start time"];
                }
 
-               if (experimentItemsJson.hasOwnProperty("experiment name")) {
-
-
+               if (experimentItemsJson!=null&&experimentItemsJson.hasOwnProperty("experiment name")) {
 
 
 
@@ -703,7 +701,6 @@
             }).then(function (x) {
                // show the page only after all contents are loaded
                document.getElementById('updateStatus').style.display = "none";
-               document.getElementById('statusTable').style.display = "table";
             });
          }).catch(function (error) {
             document.getElementById('updateStatus').innerHTML = "RWE: RPC or JS error: " + mjsonrpc_decode_error(error);
