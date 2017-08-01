@@ -27,8 +27,6 @@
          </tr>
          <tr id="currentDir">
          </tr>
-
-
       </table>
 
 
@@ -46,11 +44,18 @@
 
       const ODBTableinnerHTML = "<tr><th colspan=\"7\" class=\"mtableheader\">Online Database Browser</th></tr><tr id=\"actionBar\"></tr><tr id=\"currentDir\"></tr>";
 
+      const MODE_READ = (1 << 0)
+      const MODE_WRITE = (1 << 1)
+      const MODE_DELETE = (1 << 2)
+      const MODE_EXCLUSIVE = (1 << 3)
 
+      var isExpand = false;
 
       function callback(rpc, currentDir) {
 
          var ODBTable = document.getElementById("ODBTable");
+
+
 
 
          function generateSub_Dir() {
@@ -87,13 +92,19 @@
                   var sub_dir_expand_link = document.createElement("a");
                   var sub_dir_link = document.createElement("a");
 
-                  sub_dir_link.href = global_dir_data + "/" + element;
+
                   sub_dir_link.innerHTML = " " + element;
+                  if (element.charAt(0) != "/") {
+                     sub_dir_link.href = odb_hostname + "/" + element;
+                  } else {
+                     sub_dir_link.href = odb_hostname + element;
+                  }
                   sub_dir_link.className = "modblink";
 
                   sub_dir_expand_link.innerHTML = "&#9654;";
                   sub_dir_expand_link.className = "modbarrow";
                   sub_dir_expand_link.href = "#";
+                  sub_dir_expand_link.onclick = "return false;";
                   sub_dir_expand_link.addEventListener('click', expand);
                   sub_dir_expand_link.addEventListener('mouseover', highlight);
                   sub_dir_expand_link.addEventListener('mouseout', unhighlight);
@@ -112,7 +123,46 @@
          function generateODB_Keys() {
 
 
+
+            function editKey(element) {
+               resetEditKey();
+               currentEditing = element;
+               element.style.display = "none";
+               var editableKey = document.createElement("td");
+               var input = document.createElement("input");
+               input.value = element.innerText;
+               editableKey.appendChild(input);
+               if (element.className.indexOf("expandCell") != -1) {
+                  editableKey.className = "editableKey expandCell";
+               } else {
+                  editableKey.className = "editableKey";
+               }
+               var parent = element.parentNode;
+               parent.insertBefore(editableKey, element);
+            }
+
+            function resetEditKey() {
+               var editingKeyCells = document.getElementsByClassName("editableKey");
+
+               Array.prototype.forEach.call(editingKeyCells, function (ele) {
+                  ele.outerHTML = "";
+                  delete ele;
+               });
+
+               var keyCells = document.getElementsByClassName("keyCell");
+
+               if (currentEditing != null) {
+                  if (isExpand || currentEditing.className.indexOf("expandCell") == -1)
+                     currentEditing.style.display = "table-cell";
+               }
+
+            }
+
+
+
             function expandproperty() {
+               isExpand = true;
+
                var hidecells = document.getElementsByClassName("expandCell");
 
                Array.prototype.forEach.call(hidecells, function (element) {
@@ -120,10 +170,12 @@
                });
                exp.removeEventListener('click', expandproperty);
                exp.addEventListener('click', foldproperty);
-               exp.innerHTML = "-";
+               exp.innerHTML = "&#8722;";
             }
 
             function foldproperty() {
+               isExpand = false;
+
                var hidecells = document.getElementsByClassName("expandCell");
 
                Array.prototype.forEach.call(hidecells, function (element) {
@@ -131,7 +183,7 @@
                });
                exp.removeEventListener('click', foldproperty);
                exp.addEventListener('click', expandproperty)
-               exp.innerHTML = "+";
+               exp.innerHTML = "&#43;";
 
             }
 
@@ -171,6 +223,7 @@
 
             if (odb_keys.length > 0) {
                var key_title_row = document.createElement("tr");
+               key_title_row.className = "mODBtr";
 
                var key_title = document.createElement("th");
                key_title.innerHTML = "Key";
@@ -204,11 +257,12 @@
 
                value_title.appendChild(expandkey);
 
-               var exp = document.createElement("a");
+               var exp = document.createElement("button");
                exp.className = "modblink";
                exp.id = "exp";
                exp.href = "#";
-               exp.innerHTML = "+";
+               exp.onclick = "return false;";
+               exp.innerHTML = "&#43;";
                exp.addEventListener('click', expandproperty);
 
                expandkey.appendChild(exp);
@@ -225,40 +279,80 @@
 
                odb_keys.forEach(function (element) {
                   var key_row = document.createElement("tr");
+                  key_row.className = "mODBtr";
 
                   var key_row_key = document.createElement("td");
                   key_row_key.innerHTML = element;
+                  key_row_key.className = "keyCell";
 
                   var key_row_value = document.createElement("td");
                   key_row_value.innerHTML = obj[element];
+                  key_row_value.className = "keyCell";
 
                   var key_row_type = document.createElement("td");
                   key_row_type.innerHTML = obj[element + "/key"]["type"];
-                  key_row_type.className = "expandCell";
+                  key_row_type.className = "expandCell keyCell";
+
+                  switch (obj[element + "/key"]["type"]) {
+                     case 1: key_row_type.innerHTML = "BYTE"; break;
+                     case 2: key_row_type.innerHTML = "SBYTE"; break;
+                     case 3: key_row_type.innerHTML = "CHAR"; break;
+                     case 4: key_row_type.innerHTML = "WORD"; break;
+                     case 5: key_row_type.innerHTML = "SHORT"; break;
+                     case 6: key_row_type.innerHTML = "DWORD"; break;
+                     case 7: key_row_type.innerHTML = "INT"; break;
+                     case 8: key_row_type.innerHTML = "BOOL"; break;
+                     case 9: key_row_type.innerHTML = "FLOAT"; break;
+                     case 10: key_row_type.innerHTML = "DOUBLE"; break;
+                     case 11: key_row_type.innerHTML = "BITFIELD"; break;
+                     case 12: key_row_type.innerHTML = "STRING"; break;
+                     case 13: key_row_type.innerHTML = "ARRAY"; break;
+                     case 14: key_row_type.innerHTML = "STRUCT"; break;
+                     case 15: key_row_type.innerHTML = "KEY"; break;
+                     case 16: key_row_type.innerHTML = "LINK"; break;
+                     case 17: key_row_type.innerHTML = "LAST"; break;
+                  }
 
                   var key_row_val = document.createElement("td");
                   key_row_val.innerHTML = obj[element];
-                  key_row_val.className = "expandCell";
+                  key_row_val.className = "expandCell keyCell";
 
                   var key_row_size = document.createElement("td");
                   key_row_size.innerHTML = sizeOfObject(obj[element]);
-                  key_row_size.className = "expandCell";
+                  key_row_size.className = "expandCell keyCell";
 
                   var key_row_written = document.createElement("td");
-                  var last_written= Math.round(new Date().getTime() / 1000) - obj[element + "/key"]["last_written"];
-                  if(last_written<60){
-                     key_row_written.innerHTML=Math.floor(last_written)+"s";
-                  }else if(last_written<3600){
-                     key_row_written.innerHTML=Math.floor(last_written/60)+"m";
-                  }else if(last_written<86400){
-                     key_row_written.innerHTML=Math.floor(last_written/3600)+"h";
-                  }else if(last_written<86400*99){
-                     key_row_written.innerHTML=Math.floor(last_written/86400)+"d";
-                  }else{
-                     key_row_written.innerHTML=">99d";
+                  var last_written = Math.round(new Date().getTime() / 1000) - obj[element + "/key"]["last_written"];
+                  if (last_written < 60) {
+                     key_row_written.innerHTML = Math.floor(last_written) + "s";
+                  } else if (last_written < 3600) {
+                     key_row_written.innerHTML = Math.floor(last_written / 60) + "m";
+                  } else if (last_written < 86400) {
+                     key_row_written.innerHTML = Math.floor(last_written / 3600) + "h";
+                  } else if (last_written < 86400 * 99) {
+                     key_row_written.innerHTML = Math.floor(last_written / 86400) + "d";
+                  } else {
+                     key_row_written.innerHTML = ">99d";
                   }
-                  key_row_written.className = "expandCell";
+                  key_row_written.className = "expandCell keyCell";
 
+
+                  var key_row_mode = document.createElement("td");
+                  var access_mode = "";
+                  if (obj[element + "/key"]["access_mode"] & MODE_READ) {
+                     access_mode += "R";
+                  }
+                  if (obj[element + "/key"]["access_mode"] & MODE_WRITE) {
+                     access_mode += "W";
+                  }
+                  if (obj[element + "/key"]["access_mode"] & MODE_DELETE) {
+                     access_mode += "D";
+                  }
+                  if (obj[element + "/key"]["access_mode"] & MODE_EXCLUSIVE) {
+                     access_mode += "E";
+                  }
+                  key_row_mode.innerHTML = access_mode;
+                  key_row_mode.className = "expandCell keyCell";
 
                   key_row.appendChild(key_row_key);
                   key_row.appendChild(key_row_value);
@@ -266,6 +360,7 @@
                   key_row.appendChild(key_row_val);
                   key_row.appendChild(key_row_size);
                   key_row.appendChild(key_row_written);
+                  key_row.appendChild(key_row_mode);
 
                   ODBTable.appendChild(key_row);
                });
@@ -275,6 +370,14 @@
                Array.prototype.forEach.call(hidecells, function (element) {
                   element.style.display = "none";
                });
+
+               var keycells = document.getElementsByClassName("keyCell");
+
+               Array.prototype.forEach.call(keycells, function (element) {
+                  element.addEventListener('dblclick', function () { editKey(element); });
+                  element.addEventListener('click', function () { resetEditKey() });
+               });
+
 
 
             }
@@ -291,10 +394,32 @@
          if (global_dir_data != currentDir) {
             global_dir_data = currentDir;
             document.getElementById("currentDir").innerHTML = "";
-            var currentDirLink = document.createElement("a");
-            currentDirLink.href = currentDir;
-            currentDirLink.innerText = currentDir;
-            document.getElementById("currentDir").appendChild(currentDirLink);
+
+            dirArray = currentDir.split("/");
+            for (var i = 0; i < dirArray.length; i++) {
+               if (i == 0) {
+                  var currentDirLink = document.createElement("a");
+                  currentDirLink.innerHTML = "&#127968;";
+                  currentDirLink.href = global_base_url + "odb.html?odbpath=";//TODO: change to correct one
+               } else if (dirArray[i] != "") {
+                  var currentDirLink = document.createElement("a");
+                  currentDirLink.href = global_base_url + "odb.html?odbpath=";
+
+                  for (var j = 1; j <= i; j++) {
+                     if (dirArray[j].charAt(0) != "/") {
+                        currentDirLink.href += "/" + dirArray[j];
+                     } else {
+                        currentDirLink.href += dirArray[j];
+                     }
+                  }
+                  currentDirLink.innerText = dirArray[i];
+                  var dir_arrow = document.createElement("span");
+                  dir_arrow.innerHTML = " &#8680; "
+                  document.getElementById("currentDir").appendChild(dir_arrow);
+               }
+               document.getElementById("currentDir").appendChild(currentDirLink);
+            }
+
          }
 
          // since odb data rarely changes while browsing, if any change dynamically happens, refresh the whole page
@@ -336,11 +461,23 @@
 
 
       function update() {
-         var sub_directory = (window.location.host + window.location.pathname).replace(global_base_url, "");
-         sub_directory = sub_directory.replace("%20", " ");
+         var href = decodeURIComponent(window.location.href);
+         if (href.slice(-1) === "#")
+            href = href.substring(0, href.length - 1);
+         if (href.slice(-1) === "/")
+            href = href.substring(0, href.length - 1);
+         var directory = "/";
+         if (href.indexOf("odb.html?odbpath=") != -1) {
+            var directoryPosition = href.indexOf("odb.html?odbpath=");
+            directory = href.substring(directoryPosition + "odb.html?odbpath=".length, href.length);
+            odb_hostname = href;
+         } else {
+            if (global_base_url.slice(-1) != "/")
+               global_base_url += "/";
 
-
-         var paths = ["/System"];
+            odb_hostname = global_base_url + "odb.html?odbpath=";
+         }
+         var paths = [directory];
          mjsonrpc_db_ls(paths).then(function (rpc) {
             callback(rpc, paths[0]);
          });
@@ -353,6 +490,13 @@
          update();
          update_timer_id = setTimeout('update_periodic()', update_period);
       }
+
+      // document.getElementById("chatBox").onload = function () {
+      //    var chatBox = document.getElementById("chatBox");
+      //    chatBox.style.position="relative";
+      //    chatBox.contentWindow.document.getElementById("mheader").style.display = "none";
+      //    chatBox.contentWindow.document.getElementById("msidenav").style.display = "none";
+      // }
    </script>
 
 </body>
