@@ -20,18 +20,24 @@
    <div id="mmain">
 
       <table class="mmaintable" id="ODBTable">
+         <!-- <div id="loader" class="mloader"></div> 
          <tr>
             <th colspan="7" class="mtableheader">Online Database Browser</th>
          </tr>
-         <tr id="actionBar">
+         <tr>
+            <td id="actionBar" colspan="7">
+               <button id="create">create</button>
+               <button id="delete">delete</button>
+               <input id="searchbox" type="text" placeholder="press s to search" title="case insensitive"></input>
+            </td>
          </tr>
-         <tr id="currentDir">
-         </tr>
+         <tr>
+            <td id="currentDir" colspan="7">
+            </td>
+         </tr> -->
       </table>
 
-
    </div>
-
 
    <script>
       var update_timer_id;
@@ -42,7 +48,13 @@
 
       var currentEditing = null;
 
-      const ODBTableinnerHTML = "<tr><th colspan=\"7\" class=\"mtableheader\">Online Database Browser</th></tr><tr id=\"actionBar\"></tr><tr id=\"currentDir\"></tr>";
+      var custompath = "";
+
+      var custompathcache = "";
+
+      var subDirArray=new Array();
+
+      const ODBTableinnerHTML = "<tr><th colspan=\"7\" class=\"mtableheader\">Online Database Browser</th></tr><tr><td id=\"actionBar\" colspan=\"7\"><button id=\"create\">create</button><button id=\"delete\">delete</button><input id=\"searchbox\" type=\"text\" placeholder=\"press s to search\" title=\"case insensitive\"></input></td><tr><td id=\"currentDir\" colspan=\"7\"></td></tr><tr><td><button id=\"allSubDirs\">ALL</button></td></tr>";
 
       const MODE_READ = (1 << 0)
       const MODE_WRITE = (1 << 1)
@@ -51,19 +63,121 @@
 
       var isExpand = false;
 
+      function updatepath(element) {
+         custompath = element.id;
+         update();
+      }
+
+      function updatekey(element) {
+         //document.getElementById('loader').style.display = "block";
+         var path = custompath + "/" + element.id;
+         mjsonrpc_db_paste([path], [element.value]).then(function (rpc) {
+            update();
+         }).catch(function (error) {
+            mjsonrpc_error_alert(error);
+         });
+
+      }
+
+
+
       function callback(rpc, currentDir) {
 
-         var ODBTable = document.getElementById("ODBTable");
+         function deleteDirsAndKeys() {
+            var allDirCheckboxs = document.getElementsByClassName("sub_dir_checkbox");
+            var allKeyCheckboxs = document.getElementsByClassName("key_row_checkbox");
+            var allDeleteDirs = new Array();
+            var allDeleteKeys = new Array();
+            Array.prototype.forEach.call(allDirCheckboxs, function (element) {
+               if (element.checked)
+                  allDeleteDirs.push(element.id);
+            });
+            Array.prototype.forEach.call(allKeyCheckboxs, function (element) {
+               if (element.checked)
+                  allDeleteKeys.push(element.id);
+            });
+            if (allDeleteDirs.length == 0 && allDeleteKeys.length == 0) {
+               alert("please select at least one directory or key to delete");
+               return;
+            }
+            var allDeleteDirsStr = allDeleteDirs.map(function (ele) { return ele + "\n" });
+            var allDeleteKeysStr = allDeleteKeys.map(function (ele) { return ele + "\n" });
+            allDeleteDirsStr = allDeleteDirsStr.join("");
+            allDeleteKeysStr = allDeleteKeysStr.join("");
 
+
+            if (allDeleteDirsStr.length > 0 && allDeleteKeysStr.length > 0) {
+               var confirmStr = "You are trying to delete\n\n(DIRECTORIES)\n" + allDeleteDirsStr + "\n(KEYS)\n" + allDeleteKeysStr + "\nAre you sure?";
+            } else if (allDeleteDirsStr.length > 0) {
+               var confirmStr = "You are trying to delete\n\n(DIRECTORIES)\n" + allDeleteDirsStr + "\nAre you sure?";
+            } else if (allDeleteKeysStr.length > 0) {
+               var confirmStr = "You are trying to delete\n\n(KEYS)\n" + allDeleteKeysStr + "\nAre you sure?";
+            }
+            if (confirm(confirmStr)) {
+               var path = new Array();
+               Array.prototype.forEach.call(allDirCheckboxs, function (element) {
+                  if (element.checked)
+                     path.push(custompath + "/" + element.id);
+               });
+               Array.prototype.forEach.call(allKeyCheckboxs, function (element) {
+                  if (element.checked)
+                     path.push(custompath + "/" + element.id);
+               });
+               mjsonrpc_db_delete(path).then(function (rpc) {
+                  update();
+               }).catch(function (error) {
+                  mjsonrpc_error_alert(error);
+               });
+            }
+         }
+
+         var ODBTable = document.getElementById("ODBTable");
+         var obj = rpc.result.data[0];
+
+         function generateActionbar() {
+            function pressKeySearch(event) {
+               if (currentEditing == null && event.keyCode == 83) {
+                  document.getElementById('searchbox').focus();
+               }
+            }
+
+            document.addEventListener("keyup", pressKeySearch);
+
+
+            document.getElementById("delete").onclick = function () { deleteDirsAndKeys(); };
+
+         }
 
 
 
          function generateSub_Dir() {
 
+            function checkAllCheckbox() {
+               var allCheckboxs = document.getElementsByClassName("sub_dir_checkbox");
+               Array.prototype.forEach.call(allCheckboxs, function (element) {
+                  if (element.checked) {
+                     element.checked = false;
+                     element.style.opacity = 0.4;
+                  } else {
+                     element.checked = true;
+                     element.style.opacity = 1;
+                  }
+               });
+            }
+
 
             if (sub_dir.length > 0) {
                sub_dir.forEach(function (element) {
 
+
+                  function showCheckbox() {
+                     sub_dir_checkbox.style.opacity = 1;
+                  }
+
+                  function hideCheckbox() {
+                     if (!sub_dir_checkbox.checked)
+                        sub_dir_checkbox.style.opacity = 0.3;
+                  }
 
                   function expand() {
                      sub_dir_expand_link.innerHTML = "&#9660;";
@@ -88,16 +202,30 @@
 
 
                   var sub_dir_row = document.createElement("tr");
+
+                  var sub_dir_checkbox = document.createElement("input");
                   var sub_dir_col = document.createElement("td");
-                  var sub_dir_expand_link = document.createElement("a");
-                  var sub_dir_link = document.createElement("a");
+                  var sub_dir_expand_link = document.createElement("span");
+                  var sub_dir_link = document.createElement("span");
+
+
+
+                  sub_dir_checkbox.type = "checkbox";
+                  sub_dir_checkbox.title = "double click to select all";
+                  sub_dir_checkbox.id = element;
+                  sub_dir_checkbox.className = "sub_dir_checkbox";
+                  sub_dir_checkbox.style.opacity = 0.3;
+                  sub_dir_checkbox.addEventListener('mouseover', showCheckbox);
+                  sub_dir_checkbox.addEventListener('mouseout', hideCheckbox);
 
 
                   sub_dir_link.innerHTML = " " + element;
-                  if (element.charAt(0) != "/") {
-                     sub_dir_link.href = odb_hostname + "/" + element;
+                  sub_dir_link.href = "#";
+                  sub_dir_link.onclick = "return false;";
+                  if (element.charAt(0) != "/" && custompath.slice(-1) != "/") {
+                     sub_dir_link.addEventListener('click', function () { custompath += "/" + element; update(); });
                   } else {
-                     sub_dir_link.href = odb_hostname + element;
+                     sub_dir_link.addEventListener('click', function () { custompath += element; update(); });
                   }
                   sub_dir_link.className = "modblink";
 
@@ -109,19 +237,48 @@
                   sub_dir_expand_link.addEventListener('mouseover', highlight);
                   sub_dir_expand_link.addEventListener('mouseout', unhighlight);
 
+                  sub_dir_col.appendChild(sub_dir_checkbox);
                   sub_dir_col.appendChild(sub_dir_expand_link);
                   sub_dir_col.appendChild(sub_dir_link);
-                  sub_dir_col.colSpan = "2";
+
+                  sub_dir_col.colSpan = "3";
 
                   sub_dir_row.appendChild(sub_dir_col);
 
                   ODBTable.appendChild(sub_dir_row);
+
                });
+               document.getElementById("allSubDirs").style.display="block";
+               document.getElementById("allSubDirs").addEventListener("click", checkAllCheckbox);
+            } else {
+               document.getElementById("allSubDirs").style.display="none";
             }
          }
 
          function generateODB_Keys() {
 
+            function checkAllCheckbox() {
+               var allCheckboxs = document.getElementsByClassName("key_row_checkbox");
+               Array.prototype.forEach.call(allCheckboxs, function (element) {
+                  if (element.checked) {
+                     element.checked = false;
+                     element.style.opacity = 0.4;
+                  } else {
+                     element.checked = true;
+                     element.style.opacity = 1;
+                  }
+               });
+            }
+
+
+            function showCheckbox(element) {
+               element.style.opacity = 1;
+            }
+
+            function hideCheckbox(element) {
+               if (!element.checked)
+                  element.style.opacity = 0.4;
+            }
 
 
             function editKey(element) {
@@ -130,7 +287,18 @@
                element.style.display = "none";
                var editableKey = document.createElement("td");
                var input = document.createElement("input");
+               input.id = element.id;
+               input.lastvalue = element.innerText;
                input.value = element.innerText;
+               document.addEventListener("keydown", function (event) {
+                  if (event.keyCode == 27) resetEditKey();
+                  if (event.keyCode == 13)
+                     if (input.value != input.lastvalue) {
+                        updatekey(input);
+                     } else {
+                        resetEditKey();
+                     }
+               });
                editableKey.appendChild(input);
                if (element.className.indexOf("expandCell") != -1) {
                   editableKey.className = "editableKey expandCell";
@@ -154,6 +322,7 @@
                if (currentEditing != null) {
                   if (isExpand || currentEditing.className.indexOf("expandCell") == -1)
                      currentEditing.style.display = "table-cell";
+                  currentEditing = null;
                }
 
             }
@@ -206,8 +375,7 @@
                   else if (typeof value === 'number') {
                      bytes += 8;
                   }
-                  else if
-        (
+                  else if (
                      typeof value === 'object'
                      && objectList.indexOf(value) === -1
                   ) {
@@ -224,6 +392,15 @@
             if (odb_keys.length > 0) {
                var key_title_row = document.createElement("tr");
                key_title_row.className = "mODBtr";
+
+
+               var key_title_checkbox = document.createElement("button");
+               key_title_checkbox.id = "allElements";
+               key_title_checkbox.innerText = "ALL";
+               key_title_checkbox.className = "key_selectall";
+               var key_title_checkall = document.createElement("th");
+               key_title_checkall.appendChild(key_title_checkbox);
+
 
                var key_title = document.createElement("th");
                key_title.innerHTML = "Key";
@@ -257,7 +434,7 @@
 
                value_title.appendChild(expandkey);
 
-               var exp = document.createElement("button");
+               var exp = document.createElement("span");
                exp.className = "modblink";
                exp.id = "exp";
                exp.href = "#";
@@ -267,6 +444,7 @@
 
                expandkey.appendChild(exp);
 
+               key_title_row.appendChild(key_title_checkall);
                key_title_row.appendChild(key_title);
                key_title_row.appendChild(value_title);
                key_title_row.appendChild(type_title);
@@ -281,13 +459,27 @@
                   var key_row = document.createElement("tr");
                   key_row.className = "mODBtr";
 
+                  var key_row_checkbox_cell = document.createElement("td");
+                  key_row_checkbox_cell.className = "keyCell";
+                  var key_row_checkbox = document.createElement("input");
+                  key_row_checkbox.type = "checkbox";
+                  key_row_checkbox.id = element;
+                  key_row_checkbox.className = "key_row_checkbox";
+                  key_row_checkbox.title = "double click to select all";
+                  key_row_checkbox.style.opacity = 0.4;
+                  key_row_checkbox.addEventListener('mouseover', function () { showCheckbox(key_row_checkbox) });
+                  key_row_checkbox.addEventListener('mouseout', function () { hideCheckbox(key_row_checkbox) });
+                  key_row_checkbox_cell.appendChild(key_row_checkbox);
+
                   var key_row_key = document.createElement("td");
                   key_row_key.innerHTML = element;
                   key_row_key.className = "keyCell";
 
+
                   var key_row_value = document.createElement("td");
                   key_row_value.innerHTML = obj[element];
-                  key_row_value.className = "keyCell";
+                  key_row_value.id = element;
+                  key_row_value.className = "keyCell mkeyCellEditable";
 
                   var key_row_type = document.createElement("td");
                   key_row_type.innerHTML = obj[element + "/key"]["type"];
@@ -322,19 +514,9 @@
                   key_row_size.className = "expandCell keyCell";
 
                   var key_row_written = document.createElement("td");
-                  var last_written = Math.round(new Date().getTime() / 1000) - obj[element + "/key"]["last_written"];
-                  if (last_written < 60) {
-                     key_row_written.innerHTML = Math.floor(last_written) + "s";
-                  } else if (last_written < 3600) {
-                     key_row_written.innerHTML = Math.floor(last_written / 60) + "m";
-                  } else if (last_written < 86400) {
-                     key_row_written.innerHTML = Math.floor(last_written / 3600) + "h";
-                  } else if (last_written < 86400 * 99) {
-                     key_row_written.innerHTML = Math.floor(last_written / 86400) + "d";
-                  } else {
-                     key_row_written.innerHTML = ">99d";
-                  }
-                  key_row_written.className = "expandCell keyCell";
+                  key_row_written.innerHTML = getLastWritten(element);
+                  key_row_written.id = element;
+                  key_row_written.className = "expandCell keyCell lastWritten";
 
 
                   var key_row_mode = document.createElement("td");
@@ -354,6 +536,7 @@
                   key_row_mode.innerHTML = access_mode;
                   key_row_mode.className = "expandCell keyCell";
 
+                  key_row.appendChild(key_row_checkbox_cell);
                   key_row.appendChild(key_row_key);
                   key_row.appendChild(key_row_value);
                   key_row.appendChild(key_row_type);
@@ -374,20 +557,56 @@
                var keycells = document.getElementsByClassName("keyCell");
 
                Array.prototype.forEach.call(keycells, function (element) {
-                  element.addEventListener('dblclick', function () { editKey(element); });
                   element.addEventListener('click', function () { resetEditKey() });
                });
 
+               var keycells = document.getElementsByClassName("mkeyCellEditable");
 
+               Array.prototype.forEach.call(keycells, function (element) {
+                  element.addEventListener('click', function () { editKey(element); });
+                  element.addEventListener('touchstart', function () { editKey(element); });
+               });
+
+               document.getElementById("allElements").addEventListener("click", checkAllCheckbox);
 
             }
          }
 
+         function getLastWritten(element) {
+            var last_written = Math.round(new Date().getTime() / 1000) - obj[element + "/key"]["last_written"];
+            if (last_written < 60) {
+               return Math.floor(last_written) + "s";
+            } else if (last_written < 3600) {
+               return Math.floor(last_written / 60) + "m";
+            } else if (last_written < 86400) {
+               return Math.floor(last_written / 3600) + "h";
+            } else if (last_written < 86400 * 99) {
+               return Math.floor(last_written / 86400) + "d";
+            } else {
+               return ">99d";
+            }
+         }
+
+         function updateLastWritten() {
+            var lastWrittenCells = document.getElementsByClassName("lastWritten");
+
+            Array.prototype.forEach.call(lastWrittenCells, function (element) {
+               var a = getLastWritten(element.id);
+               if (element.innerHTML != getLastWritten(element.id)) {
+                  element.innerHTML = getLastWritten(element.id);
+               }
+            });
+         }
+
+
+         // CALLBACK STARTS HERE
 
 
          if (global_dir_data != currentDir || JSON.stringify(global_rpc_data) != JSON.stringify(rpc.result.data)) {
-            ODBTable.innerHTML = ODBTableinnerHTML;
-
+            if (ODBTable.innerHTML != ODBTableinnerHTML)
+               ODBTable.innerHTML = ODBTableinnerHTML;
+            global_dir_data = "";
+            global_rpc_data = "";
          }
 
          // odb directory very rarely changes
@@ -398,27 +617,39 @@
             dirArray = currentDir.split("/");
             for (var i = 0; i < dirArray.length; i++) {
                if (i == 0) {
-                  var currentDirLink = document.createElement("a");
+                  var currentDirLink = document.createElement("span");
+                  currentDirLink.className = "modblink";
                   currentDirLink.innerHTML = "&#127968;";
-                  currentDirLink.href = global_base_url + "odb.html?odbpath=";//TODO: change to correct one
+                  currentDirLink.href = "#";
+                  currentDirLink.onclick = "return false;"
+                  currentDirLink.addEventListener('click', function () { custompath = "/"; update(); });
+                  //                  currentDirLink.href = global_base_url + "odb.html?odbpath=";//TODO: change to correct one
                } else if (dirArray[i] != "") {
-                  var currentDirLink = document.createElement("a");
-                  currentDirLink.href = global_base_url + "odb.html?odbpath=";
+                  var currentDirLink = document.createElement("span");
+                  currentDirLink.className = "modblink";
+                  currentDirLink.href = "#";
+                  currentDirLink.onclick = function () { updatepath(this); };
 
+                  var link = "";
                   for (var j = 1; j <= i; j++) {
                      if (dirArray[j].charAt(0) != "/") {
-                        currentDirLink.href += "/" + dirArray[j];
+                        link += "/" + dirArray[j];
                      } else {
-                        currentDirLink.href += dirArray[j];
+                        link += dirArray[j];
                      }
                   }
+                  currentDirLink.id = link
                   currentDirLink.innerText = dirArray[i];
+
                   var dir_arrow = document.createElement("span");
                   dir_arrow.innerHTML = " &#8680; "
+
                   document.getElementById("currentDir").appendChild(dir_arrow);
                }
                document.getElementById("currentDir").appendChild(currentDirLink);
             }
+
+
 
          }
 
@@ -428,7 +659,6 @@
 
             if (rpc.result.data != null && rpc.result.data != undefined) {
 
-               var obj = rpc.result.data[0];
                var sub_dir = new Array();
                var odb_keys = new Array();
 
@@ -447,12 +677,16 @@
                   // rest of them are key properties
                });
 
+               generateActionbar();
                generateSub_Dir();
                generateODB_Keys();
+
+               custompathcache = custompath;
 
             }
          }
 
+         updateLastWritten();
 
 
 
@@ -461,25 +695,39 @@
 
 
       function update() {
-         var href = decodeURIComponent(window.location.href);
-         if (href.slice(-1) === "#")
-            href = href.substring(0, href.length - 1);
-         if (href.slice(-1) === "/")
-            href = href.substring(0, href.length - 1);
-         var directory = "/";
-         if (href.indexOf("odb.html?odbpath=") != -1) {
-            var directoryPosition = href.indexOf("odb.html?odbpath=");
-            directory = href.substring(directoryPosition + "odb.html?odbpath=".length, href.length);
-            odb_hostname = href;
-         } else {
-            if (global_base_url.slice(-1) != "/")
-               global_base_url += "/";
-
-            odb_hostname = global_base_url + "odb.html?odbpath=";
+         if (custompath != custompathcache) {
+            // document.getElementById('loader').style.display = "block";
+            //window.location.replace(global_base_url + "odb.html?odbpath=" + custompath);
+            window.location.href = global_base_url + "odb.html?odbpath=" + custompath;
          }
-         var paths = [directory];
+         if (custompath == "") {
+            var href = decodeURIComponent(window.location.href);
+            if (href.slice(-1) === "#")
+               href = href.substring(0, href.length - 1);
+            if (href.slice(-1) === "/")
+               href = href.substring(0, href.length - 1);
+            var directory = "/";
+            if (href.indexOf("odb.html?odbpath=") != -1) {
+               var directoryPosition = href.indexOf("odb.html?odbpath=");
+               directory = href.substring(directoryPosition + "odb.html?odbpath=".length, href.length);
+               odb_hostname = href;
+            } else {
+               if (global_base_url.slice(-1) != "/")
+                  global_base_url += "/";
+
+               odb_hostname = global_base_url + "odb.html?odbpath=";
+            }
+            custompath = directory;
+            var paths = [directory];
+         } else {
+            var paths = [custompath];
+         }
          mjsonrpc_db_ls(paths).then(function (rpc) {
             callback(rpc, paths[0]);
+         }).then(function () {
+            // document.getElementById('loader').style.display = "none";
+         }).catch(function (error) {
+            // mjsonrpc_error_alert(error);
          });
       }
 
