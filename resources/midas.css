@@ -292,6 +292,11 @@ input[type=text] {
    padding: 0.25em;
 }
 
+
+.mtitleCell{
+    font-weight: bold;
+}
+
 /* floating footer */
 
 div.mwrapper {
@@ -353,6 +358,15 @@ div.mpush{
 
 .mkeyCellEditable{
     color: #0000FF;
+}
+
+.mnobordertable {
+   background-color: #F5F5F5;
+   margin-left: auto;
+   margin-right: auto;
+   margin-top: 0.5em;
+   margin-bottom: 0.5em;
+   padding: 3px;
 }
 
 
