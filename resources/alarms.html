@@ -20,13 +20,11 @@
       <button class="mbutton" id='al_system_enable' onclick='enable_alarm_system()'>Enable the alarm system</button>
       <button class="mbutton" id='al_system_disable' onclick='disable_alarm_system(false)'>Disable the alarm system
       </button>
-      <input class="mfont" type="checkbox" id="al_sound_checkbox" onclick="storage_alarmSound(this.checked);"><span
+      <input class="mfont" type="checkbox" id="al_sound_checkbox" onclick="mhttpdConfigSet('alarmSound', this.checked);"><span
            class="mfont">Play sound</span></input>
-      <input class="mfont" type="checkbox" id="al_speak_checkbox" onclick="storage_alarmSpeak(this.checked);"><span
-           class="mfont">Speak</span></input>
    </div>
 
-   <div id='al_system_disabled_notice' class='mfont mredcolour redLight'>
+   <div id='al_system_disabled_notice' class='mfont mredcolor redLight'>
       <p align="center">
          Alarm system disabled
       </p>
@@ -250,10 +248,7 @@
          }
       }
 
-      //console.log("alarm sound " + storage_alarmSound() + ", speak " + storage_alarmSpeak());
-
-      document.getElementById("al_sound_checkbox").checked = storage_alarmSound();
-      document.getElementById("al_speak_checkbox").checked = storage_alarmSpeak();
+      document.getElementById("al_sound_checkbox").checked = mhttpdConfig().alarmSound;
 
       for (var name in alarms) {
          var alarm = alarms[name];
@@ -265,13 +260,13 @@
 
          if (!alarm.active) {
             e.childNodes[1].innerHTML = "Disabled";
-            e.childNodes[1].className = "myellowcolour yellowLight";
+            e.childNodes[1].className = "myellowcolor yellowLight";
          } else if (alarm.triggered) {
             e.childNodes[1].innerHTML = "Triggered";
-            e.childNodes[1].className = "mredcolour redLight";
+            e.childNodes[1].className = "mredcolor redLight";
          } else {
             e.childNodes[1].innerHTML = "OK";
-            e.childNodes[1].className = "mgreencolour greenLight";
+            e.childNodes[1].className = "mgreencolor greenLight";
          }
 
          if (alarm.time_triggered_first) {
@@ -308,7 +303,8 @@
          }
       } // loop over all alarms
 
-      document.getElementById('mheader_last_updated').innerHTML = new Date;
+      // handled now by mhttpd_refresh
+      //document.getElementById('mheader_last_updated').innerHTML = new Date;
       //document.getElementById('updateStatus').innerHTML = "RWPD";
       document.getElementById('updateStatus').innerHTML = "";
    }
