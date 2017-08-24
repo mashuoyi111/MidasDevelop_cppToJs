@@ -409,7 +409,7 @@ function mhttpd_init(current_page, interval, callback) {
 
    // create header
    var h = document.getElementById("mheader");
-   if (h !== undefined)
+   if (h !== undefined) {
       h.innerHTML =
          "<div style='display:inline-block; float:left';>" +
          "<span class='mmenuitem' style='padding-right: 10px;margin-right: 20px;' onclick='mhttpd_toggle_menu()'>&#9776;</span>" +
@@ -422,6 +422,10 @@ function mhttpd_init(current_page, interval, callback) {
          "<div id='mheader_alarm'>&nbsp;</div>" +
          "<div style='display: inline; font-size: 75%; margin-right: 10px' id='mheader_last_updated'></div>" +
          "</div>";
+   }
+
+   mhttpd_resize_sidenav();
+   window.addEventListener('resize', mhttpd_resize_sidenav);
 
    // put error header in front of header
    var d = document.createElement('div');
@@ -450,7 +454,7 @@ function mhttpd_init(current_page, interval, callback) {
          var m = document.getElementById("mmain");
          if (m !== undefined) {
             m.style.marginLeft = document.getElementById("msidenav").clientWidth + "px";
-            m.style.display = "block";
+            m.style.opacity = 1;
          }
       }
 
@@ -551,7 +555,7 @@ function mhttpd_init(current_page, interval, callback) {
          var m = document.getElementById("mmain");
          if (m !== undefined) {
             m.style.marginLeft = document.getElementById("msidenav").clientWidth + "px";
-            m.style.display = "block";
+            m.style.opacity = 1;
          }
 
          // cache navigation buttons in browser local storage
@@ -618,6 +622,14 @@ function mhttpd_init(current_page, interval, callback) {
       interval = 1000;
    mhttpd_refresh_interval = interval;
    mhttpd_refresh();
+}
+
+function mhttpd_resize_sidenav() {
+   var h = document.getElementById('mheader');
+   var s = document.getElementById('msidenav');
+   s.style.top = h.clientHeight + 1 + "px";
+   var m = document.getElementById('mmain');
+   m.style.paddingTop = h.clientHeight + 1 + "px";
 }
 
 var mhttpd_last_message = 1;
@@ -740,6 +752,7 @@ function mhttpd_refresh() {
          chat = undefined;
 
       mhttpd_message(msg, chat);
+      mhttpd_resize_sidenav();
 
       if (mhttpd_refresh_interval != undefined && mhttpd_refresh_interval > 0)
          mhttpd_refresh_id = window.setTimeout(mhttpd_refresh, mhttpd_refresh_interval);
@@ -809,7 +822,7 @@ function mhttpd_message(msg, chat) {
 
    if (m !== "") {
       var d = document.getElementById("mheader_message");
-      var s = m + "&nbsp;&nbsp;&nbsp;<span style='cursor: pointer;' onclick='document.getElementById(&quot;mheader_message&quot;).style.display = &quot;none&quot;'>&#9587;</span>";
+      var s = m + "&nbsp;&nbsp;&nbsp;<span style='cursor: pointer;' onclick='document.getElementById(&quot;mheader_message&quot;).style.display = &quot;none&quot;;mhttpd_resize_sidenav();'>&#9587;</span>";
       var first = (d.innerHTML === "");
       if (d !== undefined && d.innerHTML.substr(0, d.innerHTML.search("&nbsp;&nbsp;&nbsp;<span")) != m) {
          d.innerHTML = s;
@@ -1265,12 +1278,13 @@ var mhttpd_config_defaults = {
    'speakTalk': true,
    'speakError': false,
    'speakInfo': false,
-   'speakVoice': 'male',
+   'speakVoice': 'Alex',
    'speakVolume': 1,
 
    'alarmSound': true,
    'alarmSoundFile': 'beep.mp3',
    'alarmRepeat': 60,
+   'alarmVolume': 1,
 
    'var': {
       'lastSpeak': 0,
@@ -1321,6 +1335,7 @@ function mhttpd_alarm_play() {
       if (now > mhttpdConfig().var.lastAlarm + parseFloat(mhttpdConfig().alarmRepeat)) {
          mhttpdConfigSet("var.lastAlarm", now);
          var audio = new Audio(mhttpdConfig().alarmSoundFile);
+         audo.volume = mhttpdConfig().alarmVolume;
          audio.play();
       }
    }
@@ -1335,8 +1350,9 @@ function mhttpd_speak(time, text) {
       if (time > mhttpdConfig().var.lastSpeak) {
          mhttpdConfigSet("var.lastSpeak", time);
          var u = new SpeechSynthesisUtterance(text);
-         u.voice = speechSynthesis.getVoices().filter(function(voice) { return voice.name == "Fred"; })[0];
-         speechSynthesis.speak(u);
+         u.voice = speechSynthesis.getVoices().filter(function(voice) { return voice.name == mhttpdConfig().speakVoice; })[0];
+         u.volume = mhttpdConfig().speakVolume;
+            speechSynthesis.speak(u);
       }
    }
 }
